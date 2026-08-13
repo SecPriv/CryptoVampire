@@ -327,7 +327,7 @@ where
                   fresh_vars,
                   ..
               }| {
-            trace!("in assignement\n\t{:}", &ma);
+            trace!("in assignement\n\t{:}", ma);
             let vars = step.free_variables();
 
             let collision_var = make_collision_avoiding_subst(

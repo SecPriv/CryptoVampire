@@ -51,7 +51,7 @@ impl<'str, S> Options<'str, S> {
     }
 
     #[allow(clippy::needless_lifetimes)]
-    pub fn as_str_list<'b>(&'b self) -> impl Iterator<Item = &'_ S> + 'b {
+    pub fn as_str_list<'b>(&'b self) -> impl Iterator<Item = &'b S> + 'b {
         self.options.iter().map(|MOption(i)| &i.content)
     }
 

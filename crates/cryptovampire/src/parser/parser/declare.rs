@@ -156,7 +156,7 @@ where
     //     ))
     // })
     query.and_then(|q| {
-        q.ok_or_else(|| ParsingError::OneOff("the querry is missing"))
+        q.ok_or(ParsingError::OneOff("the querry is missing"))
             .with_location(|| ast)
     })
 }

@@ -181,7 +181,7 @@ impl<'bump> IntoVariableIter<'bump> for Variable<'bump> {
     }
 }
 
-impl<'a, 'bump> IntoVariableIter<'bump> for &'a Variable<'bump> {
+impl<'bump> IntoVariableIter<'bump> for &Variable<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         [*self].into_iter()
     }

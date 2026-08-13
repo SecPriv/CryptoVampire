@@ -183,7 +183,7 @@ mod assert_crypto {
             new_fun = Some(ast::DeclareFunction::new(
                 Default::default(),
                 name.clone(),
-                std::iter::repeat(MESSAGE.name()).take(3),
+                std::iter::repeat_n(MESSAGE.name(), 3),
                 BOOL.name(),
             ));
             ast::Function::from_name(name)

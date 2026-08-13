@@ -41,7 +41,7 @@ impl Locate for String {
 }
 
 impl LocateHelper for str {
-    fn help_provide(&self, str: &(dyn std::fmt::Display)) -> Location {
+    fn help_provide(&self, str: &dyn std::fmt::Display) -> Location {
         Location::from_locate(format!("{str}\nat: {self}"))
     }
 }

@@ -44,14 +44,14 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::App { head, args } => {
-                write!(f, "{:}(", &head)?;
+                write!(f, "{:}(", head)?;
                 for arg in args {
                     write!(f, "{:}, ", arg)?;
                 }
                 write!(f, ")")
             }
             Self::Binder { head, vars, args } => {
-                write!(f, "{:}(", &head)?;
+                write!(f, "{:}(", head)?;
                 for var in vars {
                     write!(f, "{:}, ", var)?;
                 }
@@ -66,7 +66,7 @@ where
     }
 }
 
-impl<'a, B, F, V> LocationProvider for &'a BaseFormula<B, F, V>
+impl<B, F, V> LocationProvider for &BaseFormula<B, F, V>
 where
     B: Display,
     F: Display,

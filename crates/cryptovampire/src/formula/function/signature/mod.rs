@@ -64,7 +64,7 @@ pub trait Signature<'bump>: Sized + std::fmt::Debug {
         let args_unify = self
             .args()
             .into_iter()
-            .zip_longest(other.args().into_iter())
+            .zip_longest(other.args())
             .enumerate()
             .try_fold(None, |_, (i, e)| match e {
                 itertools::EitherOrBoth::Both(l, r) => l

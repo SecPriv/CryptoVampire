@@ -22,7 +22,7 @@ impl<'str> HasInitStep for &'str str {
     }
 }
 
-impl<'str> FromStaticString for &'str str {
+impl FromStaticString for &str {
     fn from_static(s: &'static str) -> Self {
         s
     }

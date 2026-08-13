@@ -34,7 +34,7 @@ boiler_plate!(Infix<'a, &'a str>, 'a, infix_term; |p| {
 
 impl<'str, S: Display> Display for Infix<'str, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let op = format!(" {} ", &self.operation);
+        let op = format!(" {} ", self.operation);
         write!(f, "({})", self.terms.iter().format(&op))
     }
 }
