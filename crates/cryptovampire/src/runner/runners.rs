@@ -14,6 +14,7 @@ use log::{debug, trace};
 use shared_child::SharedChild;
 use thiserror::Error;
 
+use super::cvc5::Cvc5Runner;
 use super::dyn_traits::{self, DynRunner};
 use super::z3::Z3Runner;
 use super::{RunnerHandler, VampireArg, VampireExec};
@@ -26,7 +27,7 @@ use crate::runner::{RunnerError, RunnerOut};
 pub struct Runners {
     pub vampire: Option<VampireExec>,
     pub z3: Option<Z3Runner>,
-    pub cvc5: Option<Infallible>,
+    pub cvc5: Option<Cvc5Runner>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
@@ -67,11 +68,16 @@ impl Runners {
         }
         let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
 
-        let Runners { vampire, z3, .. } = self;
+        let Runners {
+            vampire,
+            z3,
+            cvc5,
+        } = self;
 
         let v = vampire.map(|v| dyn_traits::RunnerAndDiscoverer::Discoverer(Box::new(v)));
         let z3 = z3.map(|v| dyn_traits::RunnerAndDiscoverer::Runner(Box::new(v)));
-        let runners = [v, z3].into_iter().flatten().collect_vec();
+        let cvc5 = cvc5.map(|v| dyn_traits::RunnerAndDiscoverer::Runner(Box::new(v)));
+        let runners = [v, z3, cvc5].into_iter().flatten().collect_vec();
 
         for i in 1..=n {
             debug!("running {i:}/{n:}");
@@ -125,7 +131,18 @@ impl TryFrom<SolverConfig> for Runners {
             extra_args: vec![format!("-T:{timeout:}")],
         });
 
-        let cvc5 = None;
+        let cvc5 = if !value.enable_solvers.contains(EnabledSolvers::CVC5) {
+            None
+        } else {
+            which::which(&value.locations.cvc5).ok()
+        };
+        let cvc5 = cvc5.map(|location| Cvc5Runner {
+            location,
+            // `--tlimit-per` is used (rather than `--tlimit`) because it makes
+            // cvc5 exit cleanly with `unknown (TIMEOUT)` on timeout instead of
+            // aborting.
+            extra_args: vec![format!("--tlimit-per={}", (timeout * 1000.0) as u64)],
+        });
 
         if vampire.is_none() && z3.is_none() && cvc5.is_none() {
             Err(RunnersCreationError::NoSolver)

@@ -5,9 +5,8 @@ use cryptovampire_smt::SortedVar;
 use if_chain::if_chain;
 use quarck::CowArc;
 
-use self::display::{SmtDisplayer, SmtEnv};
 use crate::environement::environement::Environement;
-use crate::environement::traits::{KnowsRealm, Realm};
+use crate::environement::traits::KnowsRealm;
 use crate::formula::file_descriptior::GeneralFile;
 use crate::formula::file_descriptior::axioms::{Axiom, Rewrite, RewriteKind};
 use crate::formula::file_descriptior::declare::Declaration;
@@ -141,14 +140,7 @@ impl<'a, 'bump> From<&'a RichFormula<'bump>> for SmtFormula<'bump> {
 }
 
 pub(crate) trait SmtDisplay<'bump>: Sized {
-    fn into_display(self, env: &impl KnowsRealm) -> impl fmt::Display + 'bump;
     fn as_display(&self, env: &impl KnowsRealm) -> impl fmt::Display + '_;
-    fn prop<D, T>(&self, disp: SmtDisplayer<D, T>) -> SmtDisplayer<D, &Self> {
-        disp.propagate(self)
-    }
-    fn default_display(&self) -> impl fmt::Display + '_ {
-        self.as_display(&Realm::Symbolic)
-    }
 }
 
 impl<'bump> FromEnv<'bump, Axiom<'bump>> for Smt<'bump> {

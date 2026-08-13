@@ -57,7 +57,7 @@ impl<T> From<(uvar, T)> for OneVarSubst<T> {
     }
 }
 
-impl<'a, 'bump: 'a> Substitution<'bump> for OneVarSubstF<'bump> {
+impl<'bump> Substitution<'bump> for OneVarSubstF<'bump> {
     fn get(&self, var: &Variable<'bump>) -> ARichFormula<'bump> {
         if var.id == self.id {
             if log_enabled!(log::Level::Trace) {

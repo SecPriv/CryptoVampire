@@ -69,6 +69,7 @@ impl<'bump> Variable<'bump> {
     ///
     /// Because I'm stupid
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn get_unique_id(&self) -> u32 {
         (self.id as u32) << 16 | (self.sort.get_id_number() as u32)
     }
@@ -181,7 +182,7 @@ impl<'bump> IntoVariableIter<'bump> for Variable<'bump> {
     }
 }
 
-impl<'a, 'bump> IntoVariableIter<'bump> for &'a Variable<'bump> {
+impl<'bump> IntoVariableIter<'bump> for &Variable<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         [*self].into_iter()
     }

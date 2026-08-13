@@ -270,6 +270,7 @@ impl<'a> Sort<'a> {
     /// gets a "unique" number for each sort
     ///
     /// This is because I am stupid and now I need it for variables...
+    #[allow(dead_code)]
     pub(crate) fn get_id_number(&self) -> u16 {
         match self.inner() {
             InnerSort::Base(TermBase::Bitstring) => 0x00,

@@ -129,7 +129,7 @@ impl<'str, S: Display> Display for Function<'str, S> {
     }
 }
 
-impl<'a, 'b, S: Clone + Borrow<str>> Applicable for &'b Function<'a, S> {
+impl<'a, S: Clone + Borrow<str>> Applicable for &Function<'a, S> {
     type Term = ast::Term<'a, S>;
 
     fn f<U, I>(self, args: I) -> Self::Term

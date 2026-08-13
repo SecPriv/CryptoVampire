@@ -549,7 +549,7 @@ fn prepare_candidate<'bump>(
         [message, signature, key].map(|f| f.translate_vars(max_var).into_arc());
     trace!(
         "after var remmap m={:}, s={:}, k={:}",
-        &message, &signature, &key
+        message, signature, key
     );
     UfCmaCandidate {
         message,

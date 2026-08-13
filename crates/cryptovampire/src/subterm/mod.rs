@@ -402,7 +402,7 @@ where
                     // This may get triggered when locking into some part of the candidate. For instance when
                     // looking for k \sqsubseteq m, m and k might share variable and this will get triggered.
                     // But this is soundly expected.
-                    warn!("collision in the variables ({:} in {:}, {:?})",x, &formula, &bounded_variables)
+                    warn!("collision in the variables ({:} in {:}, {:?})",x, formula, bounded_variables)
                 }
                 // (, formula)
                 let passing = UnfoldingStateBuilder::default().flags(deeper_kind).bound_variables(bounded_variables).build().unwrap();
@@ -435,7 +435,7 @@ where
                     trace!(
                         "[{}]\n{:?}",
                         funs.keys().map(|fsort| fsort.as_reference()).join(", "),
-                        &funs
+                        funs
                     );
                     funs.get(&sort.as_fo())
                         .unwrap_or_else(|| panic!("unsupported sort: {sort}, {sort:?}"))
@@ -556,7 +556,7 @@ fn check_variable_collision(x: &ARichFormula<'_>, m: &ARichFormula<'_>) -> bool 
                 x,
                 vminm,
                 vmaxm,
-                &m
+                m
             );
             true
         }
@@ -787,7 +787,7 @@ where
                 U = Self::U,
             >,
     {
-        trace!("{} ⊑ {}", self.x, &f);
+        trace!("{} ⊑ {}", self.x, f);
 
         // if this term "hides" some other terms to look for (e.g., macros, quantifiers) we queue them
         helper.extend_child(

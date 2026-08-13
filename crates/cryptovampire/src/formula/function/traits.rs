@@ -71,7 +71,7 @@ where
     }
 }
 
-impl<'bump, 'a, I> MaybeEvaluatable<'bump> for Option<&'a I>
+impl<'bump, I> MaybeEvaluatable<'bump> for Option<&I>
 where
     I: MaybeEvaluatable<'bump>,
 {

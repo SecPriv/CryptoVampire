@@ -87,7 +87,7 @@ impl KnowsRealm for Realm {
     }
 }
 
-impl<'a, T> KnowsRealm for &'a T
+impl<T> KnowsRealm for &T
 where
     T: KnowsRealm,
 {

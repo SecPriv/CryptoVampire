@@ -2,13 +2,6 @@
 //!  and inputs looking for subterm
 
 use super::cell::MemoryCell;
-use super::step::Step;
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct DependancyFromStep<'bump> {
-    pub steps_origin: Vec<Step<'bump>>,
-    pub cell: Option<MemoryCell<'bump>>,
-}
 
 mod call;
 mod graph;

@@ -233,7 +233,6 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         assertions.extend(
             self.assertions
                 .iter()
-                .cloned()
                 .map(|a| propagate_evaluate(a.as_ref(), &self.evaluator))
                 .map(Axiom::base),
         );

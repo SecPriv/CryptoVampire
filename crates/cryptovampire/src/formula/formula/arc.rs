@@ -151,7 +151,7 @@ impl<'bump> Display for ARichFormula<'bump> {
     }
 }
 
-impl<'a, 'bump> IntoVariableIter<'bump> for &'a ARichFormula<'bump> {
+impl<'bump> IntoVariableIter<'bump> for &ARichFormula<'bump> {
     fn vars_iter(self) -> impl Iterator<Item = Variable<'bump>> {
         self.as_expander().used_vars_iter()
     }

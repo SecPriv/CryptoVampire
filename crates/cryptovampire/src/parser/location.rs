@@ -143,7 +143,7 @@ impl Locate for PestLocation {
                     writeln!(f, "around {}:{}:{}", file!(), line!(), column!())?;
                     writeln!(f, "start={start:}\nend={end:}")?;
                     writeln!(f, "----error----\n{err}\n----")?;
-                    write!(f, "----original's span's content:\n{}", &self.str)?;
+                    write!(f, "----original's span's content:\n{}", self.str)?;
                     return Ok(());
                 }
             },

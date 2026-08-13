@@ -52,9 +52,6 @@ seq-macro = "0.3.6"
 humantime = "2.3.0"
 tokio = { version = "1", features = ["full"] }
 
-[patch.crates-io]
-lasso = { git = "https://github.com/lcnr/lasso/", branch = "patch-1" }
-
 [features]
 verbose = []
 

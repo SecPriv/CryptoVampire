@@ -11,10 +11,6 @@ use static_init::dynamic;
 use utils::string_ref::StrRef;
 use utils::traits::NicerError;
 
-/// Errors used thoughout parsing
-// mod error;
-// pub use error::{InputError, Location, WithLocation};
-
 /// The [Pstr] trait wich serves as a trick to gather many traits
 mod pstr;
 pub use pstr::*;

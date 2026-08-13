@@ -61,7 +61,7 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for UfCma<'bump> {
         EXTRACT_FORMULA
             .captures_iter(str)
             .map(|c| {
-                trace!("new clause {:?}", &c);
+                trace!("new clause {:?}", c);
                 c.extract()
             })
             .flat_map(|(_, [content])| content.split("|"))
@@ -115,7 +115,7 @@ impl<'bump> InstanceSearcher<'bump, VampireExec> for EufCma<'bump> {
             })
             .flat_map(|(_, [content])| content.split("|"))
             .filter(|s| s.contains(signname.as_ref()) || s.contains(verifyname.as_ref()))
-            .inspect(|s| debug!("new potential instance {:?}", &s))
+            .inspect(|s| debug!("new potential instance {:?}", s))
             .filter_map(|s| match TmpFormula::parse(s) {
                 Ok(f) => Some((s, f)),
                 Err(_) => {
