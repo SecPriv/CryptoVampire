@@ -12,7 +12,11 @@
 ;;                      signature-doc sort-doc builtin-doc
 ;;                   (see `cryptovampire/doc` and each library for the mechanism;
 ;;                   `builtin-doc` holds the docs the builtin wrappers inherited
-;;                   from their unwrapped Rust functions).
+;;                   from their unwrapped Rust functions);
+;;   * the low-level rust bindings (`cryptovampire/ll/*`) -- the functions are
+;;                   listed by hand below; their docs are the Rust doc comments
+;;                   (`#%native-fn-ptr-doc->string`).  Functions without a doc
+;;                   comment are still listed (with an empty body).
 ;;
 ;; Note: helpers here deliberately avoid dotted-rest closures that are called
 ;; from later definitions (a steel alpha-renaming edge case): everything builds
@@ -31,6 +35,19 @@
 (require "cryptovampire/sort")
 (require "cryptovampire/type")
 (require "cryptovampire/builtin-functions")
+
+(require-builtin cryptovampire/ll/pbl as pbl->)
+(require-builtin cryptovampire/ll/formula as llformula->)
+(require-builtin cryptovampire/ll/function as llfunction->)
+(require-builtin cryptovampire/ll/signature as llsignature->)
+(require-builtin cryptovampire/ll/variable as llvariable->)
+(require-builtin cryptovampire/ll/alias as llalias->)
+(require-builtin cryptovampire/ll/rewrite as llrewrite->)
+(require-builtin cryptovampire/ll/rule as llrule->)
+(require-builtin cryptovampire/ll/step as llstep->)
+(require-builtin cryptovampire/ll/cryptography as llcrypto->)
+(require-builtin cryptovampire/ll/report as llreport->)
+(require-builtin cryptovampire/ll/configuration as llconf->)
 
 ;; ---------------------------------------------------------------------------
 ;; doc extraction
@@ -113,6 +130,141 @@
   (list (cons 'partial partial)))
 
 ;; ---------------------------------------------------------------------------
+;; the low-level rust bindings (cryptovampire/ll/*) -- (name . value) pairs,
+;; listed by hand.  Their docs are the Rust doc comments; functions without
+;; one are still listed (with an empty body).
+;; ---------------------------------------------------------------------------
+
+(define ll-pbl-fns
+  (list
+    (cons 'run pbl->run)
+    (cons 'empty pbl->empty)
+    (cons 'declare-function pbl->declare-function)
+    (cons 'declare-protocol pbl->declare-protocol)
+    (cons 'declare-memory-cell pbl->declare-memory-cell)
+    (cons 'declare-exists pbl->declare-exists)
+    (cons 'add-rule pbl->add-rule)
+    (cons 'add-rewrite pbl->add-rewrite)
+    (cons 'add-smt-axiom pbl->add-smt-axiom)
+    (cons 'add-constrain pbl->add-constrain)
+    (cons 'publish pbl->publish)
+    (cons 'get-report pbl->get-report)
+    (cons 'get-all-protocols pbl->get-all-protocols)
+    (cons 'get-all-steps pbl->get-all-steps)))
+
+(define ll-formula-fns
+  (list
+    (cons 'binder llformula->binder)
+    (cons 'var llformula->var)
+    (cons 'app llformula->app)
+    (cons 'destruct llformula->destruct)
+    (cons 'cand llformula->cand)
+    (cons 'cor llformula->cor)
+    (cons 'ctuple llformula->ctuple)
+    (cons 'binder->exists llformula->binder->exists)
+    (cons 'binder->forall llformula->binder->forall)
+    (cons 'binder->findst llformula->binder->findst)
+    (cons 'get-sort llformula->get_sort)))
+
+(define ll-function-fns
+  (list
+    (cons 'mk-function llfunction->mk-function)
+    (cons 'mk-nonce llfunction->mk-nonce)
+    (cons 'mk-alias llfunction->mk-alias)
+    (cons 'name llfunction->name)
+    (cons 'signature llfunction->signature)))
+
+(define ll-signature-fns
+  (list
+    (cons 'new llsignature->new)
+    (cons 'inputs llsignature->inputs)
+    (cons 'output llsignature->output)))
+
+(define ll-variable-fns
+  (list
+    (cons 'fresh-with-sort llvariable->fresh-with-sort)
+    (cons 'fresh llvariable->fresh)))
+
+(define ll-alias-fns
+  (list
+    (cons 'new-rewrite llalias->new-rewrite)
+    (cons 'rewrite-from llalias->rewrite-from)
+    (cons 'rewrite-to llalias->rewrite-to)
+    (cons 'rewrite-variables llalias->rewrite-variables)))
+
+(define ll-rewrite-fns
+  (list (cons 'new llrewrite->new)))
+
+(define ll-rule-fns
+  (list (cons 'new-prolog llrule->new-prolog)))
+
+(define ll-step-fns
+  (list
+    (cons 'declare-step llstep->declare-step)
+    (cons 'declare-exists llstep->declare-exists)
+    (cons 'get-vars llstep->get-vars)
+    (cons 'get-msg llstep->get-msg)
+    (cons 'get-cond llstep->get-cond)
+    (cons 'set-msg llstep->set-msg)
+    (cons 'set-cond llstep->set-cond)
+    (cons 'string llstep->string)
+    (cons 'mk-single-assignment llstep->mk-single-assignment)
+    (cons 'insert-assignement llstep->insert-assignement)))
+
+(define ll-cryptography-fns
+  (list
+    (cons 'declare-cryptography llcrypto->declare-cryptography)
+    (cons 'register-fresh-nonce llcrypto->register-fresh-nonce)
+    (cons 'init->prf llcrypto->init->prf)
+    (cons 'init->ddh llcrypto->init->ddh)
+    (cons 'init->aenc llcrypto->init->aenc)
+    (cons 'init->senc llcrypto->init->senc)
+    (cons 'init->xor llcrypto->init->xor)))
+
+(define ll-report-fns
+  (list
+    (cons 'print-report llreport->print-report)
+    (cons 'get-hit-rate llreport->get-hit-rate)
+    (cons 'get-smt-time llreport->get-smt-time)
+    (cons 'get-runtime llreport->get-runtime)
+    (cons 'get-total-run-calls llreport->get-total-run-calls)
+    (cons 'get-total-cache-hits llreport->get-total-cache-hits)
+    (cons 'get-tested-nonces llreport->get-tested-nonces)
+    (cons 'get-max-smt-time llreport->get-max-smt-time)))
+
+;; configuration accessors (get_/set_ pairs over the `Configuration` options)
+(define ll-configuration-fns
+  (list
+    (cons 'get_trace llconf->get_trace)
+    (cons 'set_trace llconf->set_trace)
+    (cons 'get_cores llconf->get_cores)
+    (cons 'set_cores llconf->set_cores)
+    (cons 'get_prf_limit llconf->get_prf_limit)
+    (cons 'set_prf_limit llconf->set_prf_limit)
+    (cons 'get_fa_limit llconf->get_fa_limit)
+    (cons 'set_fa_limit llconf->set_fa_limit)
+    (cons 'get_ddh_limit llconf->get_ddh_limit)
+    (cons 'set_ddh_limit llconf->set_ddh_limit)
+    (cons 'get_enc_kp_limit llconf->get_enc_kp_limit)
+    (cons 'set_enc_kp_limit llconf->set_enc_kp_limit)
+    (cons 'get_smt_timeout llconf->get_smt_timeout)
+    (cons 'set_smt_timeout llconf->set_smt_timeout)
+    (cons 'get_keep_smt_files llconf->get_keep_smt_files)
+    (cons 'set_keep_smt_files llconf->set_keep_smt_files)
+    (cons 'get_trace_rebuilds llconf->get_trace_rebuilds)
+    (cons 'set_trace_rebuilds llconf->set_trace_rebuilds)
+    (cons 'get_trace_guessed_published_nonces llconf->get_trace_guessed_published_nonces)
+    (cons 'set_trace_guessed_published_nonces llconf->set_trace_guessed_published_nonces)
+    (cons 'get_guided_nonce_search llconf->get_guided_nonce_search)
+    (cons 'set_guided_nonce_search llconf->set_guided_nonce_search)
+    (cons 'get_egg_iter_limit llconf->get_egg_iter_limit)
+    (cons 'set_egg_iter_limit llconf->set_egg_iter_limit)
+    (cons 'get_egg_timeout llconf->get_egg_timeout)
+    (cons 'set_egg_timeout llconf->set_egg_timeout)
+    (cons 'get_egg_node_limit llconf->get_egg_node_limit)
+    (cons 'set_egg_node_limit llconf->set_egg_node_limit)))
+
+;; ---------------------------------------------------------------------------
 ;; rendering
 ;; ---------------------------------------------------------------------------
 
@@ -162,6 +314,23 @@
         (string-append "\n### Macros & values\n" (table-entries->section table "####"))
         ""))))
 
+;; Render every listed function whether or not it has a doc (rust bindings).
+;; Rust doc comments start straight with the text (no cv-help title line to
+;; strip).
+(define (ll-fns-section pairs)
+  (apply string-append
+    (map
+      (lambda (p)
+        (let ((name (symbol->string (car p))) (f (cdr p)))
+          (let ((d (raw-doc f)))
+            (string-append
+              "\n#### " name "\n\n" (if d d "") "\n"))))
+      pairs)))
+
+(define (ll-module-section title pairs)
+  (doc-put
+    (string-append "\n## " title "\n\n### Functions\n" (ll-fns-section pairs))))
+
 ;; ---------------------------------------------------------------------------
 
 (create-directory! "docs")
@@ -189,6 +358,21 @@
     (module-section "cryptovampire/solver" solver-fns solver-doc)
     (module-section "cryptovampire/cryptography" cryptography-fns #f)
     (module-section "cryptovampire/signature" '() signature-doc)
-    (module-section "cryptovampire/builtin-functions" '() builtin-doc)))
+    (module-section "cryptovampire/builtin-functions" '() builtin-doc)
+
+    ;; the low-level rust bindings
+    (doc-put "\n# Rust bindings (`cryptovampire/ll`)\n")
+    (ll-module-section "cryptovampire/ll/pbl" ll-pbl-fns)
+    (ll-module-section "cryptovampire/ll/formula" ll-formula-fns)
+    (ll-module-section "cryptovampire/ll/function" ll-function-fns)
+    (ll-module-section "cryptovampire/ll/signature" ll-signature-fns)
+    (ll-module-section "cryptovampire/ll/variable" ll-variable-fns)
+    (ll-module-section "cryptovampire/ll/alias" ll-alias-fns)
+    (ll-module-section "cryptovampire/ll/rewrite" ll-rewrite-fns)
+    (ll-module-section "cryptovampire/ll/rule" ll-rule-fns)
+    (ll-module-section "cryptovampire/ll/step" ll-step-fns)
+    (ll-module-section "cryptovampire/ll/cryptography" ll-cryptography-fns)
+    (ll-module-section "cryptovampire/ll/report" ll-report-fns)
+    (ll-module-section "cryptovampire/ll/configuration" ll-configuration-fns)))
 
 (displayln "wrote docs/scheme-api.md")
