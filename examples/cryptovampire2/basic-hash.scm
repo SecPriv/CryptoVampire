@@ -69,11 +69,5 @@
 
 ;; configuration
 ; (cv-set-trace pbl #t)
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout (b.string->duration "150ms")))
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed basic-hash"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "basic-hash" pbl)
+(run-and-save "basic-hash" pbl p1 p2 "150ms")

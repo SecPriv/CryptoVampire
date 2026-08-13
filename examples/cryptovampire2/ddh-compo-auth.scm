@@ -212,16 +212,6 @@
 (config.set_guided_nonce_search pbl #t)
 
 ;; configuration
-; (cv-set-trace pbl #t)
 (config.set_egg_node_limit pbl 100000)
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
-; (cv-set-fa-limit pbl 0)
-; (cv-set-keep-smt-files pbl #t)
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed ddh-compo-auth"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "ddh-compo-auth" pbl)
+(run-and-save "ddh-compo-auth" pbl p1 p2 "150ms")

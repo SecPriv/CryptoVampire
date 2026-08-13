@@ -73,14 +73,9 @@
 (add-rewrite pbl (rw.new "l1" '() (mexp (mexp g a1) b1) (unfold_msg mehhh p1) ))
 (add-rewrite pbl (rw.new "l2" '() (mexp g k11) (unfold_msg mehhh p2) ))
 
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (register-fresh-nonce ddh '() k11)
+
+;; configuration
 (config.set_guided_nonce_search pbl #t)
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed ssh-forward-part1-secret"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "ssh-forward-part1-secret" pbl)
+(run-and-save "ssh-forward-part1-secret" pbl p1 p2 "150ms")

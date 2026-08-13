@@ -1,5 +1,6 @@
-(provide
-  save-results scale-timeout)
+;; This file provides common tooling accross all examples, notably how to write
+;; out the results to a csv
+(provide run-and-save)
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/report as report->)
 (require-builtin cryptovampire/ll/configuration as config->)
@@ -12,7 +13,7 @@
         (begin
           (cond
             [ (string? x) (write-string x file) ]
-            [ (b.duration? x)  (write (b.duration->millis x) file) ]
+            [ (b.duration? x) (write (b.duration->millis x) file) ]
             [else (write x file) ])
           (write-string "," file)))
       args)
@@ -36,14 +37,24 @@
 
 (define (save-results name pbl)
   (let* [
-      (file (prepare get-file))
-      (report (pbl->get-report pbl))
-      (runtime (report->get-runtime report))
-      (vampire (report->get-smt-time report))
-      (max-smt (report->get-max-smt-time report))
-      (hits (report->get-total-cache-hits report))
-      (total (report->get-total-run-calls report))
-      (hit-rate (report->get-hit-rate report))
-      (vampire-timeout (config->get_smt_timeout pbl))
+    (file (prepare get-file))
+    (report (pbl->get-report pbl))
+    (runtime (report->get-runtime report))
+    (vampire (report->get-smt-time report))
+    (max-smt (report->get-max-smt-time report))
+    (hits (report->get-total-cache-hits report))
+    (total (report->get-total-run-calls report))
+    (hit-rate (report->get-hit-rate report))
+    (vampire-timeout (config->get_smt_timeout pbl))
     ]
-  (print-row file name runtime vampire max-smt total hits hit-rate vampire-timeout)))
+    (print-row file name runtime vampire max-smt total hits hit-rate vampire-timeout)))
+
+(define (run-and-save name pbl p1 p2 duration)
+  (begin
+    (config.set_smt_timeout pbl
+      (b.mult->duration scale-timeout (b.string->duration "150ms")))
+    (if (run pbl p1 p2)
+      (displayln "success")
+      (error (string-append "failed" name)))
+    (displayln (report.print-report (pbl.get-report pbl)))
+    (save-results name pbl)))

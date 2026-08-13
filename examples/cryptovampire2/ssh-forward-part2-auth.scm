@@ -228,13 +228,7 @@
       (cand (macro_exec Sfail p) (macro_cond Sfail p))
       mfalse)))
 
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
+;; configuration
 (config.set_guided_nonce_search pbl #t)
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed ssh-forward-part2-auth"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "ssh-forward-part2-auth" pbl)
+(run-and-save "ssh-forward-part2-auth" pbl p1 p2 "150ms")

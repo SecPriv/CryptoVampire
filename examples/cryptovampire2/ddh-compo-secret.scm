@@ -176,16 +176,5 @@
 ;; configuration
 ; (cv-set-trace pbl #t)
 (config.set_egg_node_limit pbl 100000)
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
-; (config.set_fa_limit pbl 5)
-; (config.set_keep_smt_files pbl #t)
-; (config.set_ddh_limit pbl 1)
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed compo-ddh-secret"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "compo-ddh-S" pbl)
-
+(run-and-save "compo-ddh-secret" pbl p1 p2 "150ms")

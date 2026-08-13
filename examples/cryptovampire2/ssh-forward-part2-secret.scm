@@ -50,13 +50,6 @@
 (publish pbl () (mexp g a1))
 (publish pbl () (mexp g b1))
 
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
+;; configuration
 
-
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed ssh-forward-part2-secret"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "ssh-forward-part2-secret" pbl)
+(run-and-save "ssh-forward-part2-secret" pbl p1 p2 "150ms")

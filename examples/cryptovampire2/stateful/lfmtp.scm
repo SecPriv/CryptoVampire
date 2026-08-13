@@ -59,14 +59,6 @@
 (bind ((i Index))
   (register-fresh-nonce prf1 (list i) (m i)))
 
-;; Configuration - use short timeout
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
+;; Configuration
 
-;; Run the indistinguishability check
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "lfmtp"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "lfmtp" pbl)
+(run-and-save "lfmtp" pbl p1 p2 "150ms")

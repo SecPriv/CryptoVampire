@@ -183,14 +183,5 @@
 ;; configuration
 ; (config.set_trace pbl #t)
 (config.set_egg_node_limit pbl 100000)
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
-; (config.set_fa_limit pbl 0)
-; (config.set_keep_smt_files pbl #t)
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed ddh-S"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "ddh-S" pbl)
+(run-and-save "ddh-S" pbl p1 p2 "150ms")

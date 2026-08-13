@@ -129,16 +129,8 @@
 
 ;; configuration
 ; (config.set_trace pbl #t)
-(define default-timeout (b.string->duration "150ms"))
-(config.set_smt_timeout pbl (b.mult->duration scale-timeout default-timeout))
 (config.set_egg_node_limit pbl 10000000)
-; (config.set_egg_node_limit pbl 200)
 (config.set_enc_kp_limit pbl 1)
 (config.set_fa_limit pbl 0)
 
-(if (run pbl p1 p2)
-  (displayln "success")
-  (error "failed private auth"))
-
-(displayln (report.print-report (pbl.get-report pbl)))
-(save-results "private-auth" pbl)
+(run-and-save "private-auth" pbl p1 p2 "150ms")
