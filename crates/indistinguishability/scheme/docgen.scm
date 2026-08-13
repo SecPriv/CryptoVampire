@@ -1,14 +1,18 @@
 ;; docgen.scm
 ;;
 ;; Generates `docs/scheme-api.md`: a markdown reference of the `cryptovampire/*`
-;; scheme libraries.
+;; scheme libraries and of the Rust-exported builtin functions.
 ;;
 ;;   * functions  -- extracted from the `help` doc tables (Rust doc comments via
-;;                   `#%native-fn-ptr-doc->string`, and the `@doc` table via
+;;                   `#%native-fn-ptr-doc->string`, and the steel `@doc` table via
 ;;                   `#%function-ptr-table-get`);
-;;   * macros / sorts -- read from the `syntax-docs` / `types-docs` registries in
-;;                   `cryptovampire/doc` (macro and value docs cannot live in the
-;;                   `help` table, see the README in scheme/libs).
+;;   * macros / sorts / builtin functions -- read from the *documentation tables*
+;;                   each library owns and exports:
+;;                      function-doc formula-doc protocol-doc solver-doc
+;;                      signature-doc sort-doc builtin-doc
+;;                   (see `cryptovampire/doc` and each library for the mechanism;
+;;                   `builtin-doc` holds the docs the builtin wrappers inherited
+;;                   from their unwrapped Rust functions).
 ;;
 ;; Note: helpers here deliberately avoid dotted-rest closures that are called
 ;; from later definitions (a steel alpha-renaming edge case): everything builds
@@ -18,7 +22,6 @@
 ;;   cargo run --release -- crates/indistinguishability/scheme/docgen.scm
 
 (require "cryptovampire/stdlib")
-(require "cryptovampire/doc")
 (require "cryptovampire/function")
 (require "cryptovampire/formula")
 (require "cryptovampire/protocol")
@@ -27,6 +30,7 @@
 (require "cryptovampire/signature")
 (require "cryptovampire/sort")
 (require "cryptovampire/type")
+(require "cryptovampire/builtin-functions")
 
 ;; ---------------------------------------------------------------------------
 ;; doc extraction
@@ -108,23 +112,22 @@
 (define stdlib-fns
   (list (cons 'partial partial)))
 
-;; ordered macro names per module (looked up in `syntax-docs`)
-(define function-syntax '(define-function define-alias alias-rw))
-(define formula-syntax '(exists forall findst))
-(define protocol-syntax '(store-cell))
-(define solver-syntax '(bind prolog add-constrain publish))
-(define signature-syntax '(signature))
-
-;; ordered sort/type names (looked up in `types-docs`)
-(define type-names
-  '(Nonce Bool Bitstring Message Time Protocol Step Index Any Condition step tuple))
-
 ;; ---------------------------------------------------------------------------
 ;; rendering
 ;; ---------------------------------------------------------------------------
 
 (define doc-pt #f)
 (define (doc-put s) (display s doc-pt))
+
+;; Entries of a documentation table as a list of (name . doc), sorted by name.
+(define (key-string k) (if (string? k) k (symbol->string k)))
+
+(define (table-entries table)
+  (map
+    (lambda (p) (cons (car p) (hash-ref table (cdr p))))
+    (sort
+      (map (lambda (k) (cons (key-string k) k)) (hash-keys->list table))
+      (lambda (a b) (string<? (car a) (car b))))))
 
 (define (fns-section pairs)
   (apply string-append
@@ -137,44 +140,31 @@
               ""))))
       pairs)))
 
-(define (syntax-doc n)
-  (if (hash-contains? syntax-docs n) (hash-ref syntax-docs n) #f))
+;; Render one documentation-table entry (macro / value / builtin) as markdown,
+;; skipping entries without any documentation.
+(define (entry-section heading entry)
+  (if (string=? (cdr entry) "")
+    ""
+    (string-append
+      "\n" heading " " (car entry) "\n\n" (cdr entry) "\n")))
 
-(define (type-doc n)
-  (if (hash-contains? types-docs n) (hash-ref types-docs n) #f))
+(define (table-entries->section table heading)
+  (apply string-append (map (lambda (e) (entry-section heading e)) (table-entries table))))
 
-(define (syntax-section names)
-  (apply string-append
-    (map
-      (lambda (n)
-        (let ((d (syntax-doc n)))
-          (if d
-            (string-append "\n#### " (symbol->string n) "\n\n" d "\n")
-            "")))
-      names)))
-
-(define (types-section names)
-  (apply string-append
-    (map
-      (lambda (n)
-        (let ((d (type-doc n)))
-          (if d
-            (string-append "\n### " (symbol->string n) "\n\n" d "\n")
-            "")))
-      names)))
-
-(define (module-section title fns syntax-names)
+(define (module-section title fns table)
   (doc-put
     (string-append
       "\n## " title "\n"
       (if (null? fns)
         ""
         (string-append "\n### Functions\n" (fns-section fns)))
-      (if (null? syntax-names)
-        ""
-        (string-append "\n### Syntax rules\n" (syntax-section syntax-names))))))
+      (if (hash? table)
+        (string-append "\n### Macros & values\n" (table-entries->section table "####"))
+        ""))))
 
 ;; ---------------------------------------------------------------------------
+
+(create-directory! "docs")
 
 (call-with-output-file "docs/scheme-api.md"
   (lambda (port)
@@ -182,21 +172,23 @@
     (doc-put
       (string-append
         "# CryptoVampire Scheme API\n\n"
-        "Reference of the `cryptovampire/*` scheme libraries.\n"
-        "Generated from the `help` doc tables and the `syntax-docs`/`types-docs`\n"
-        "registries in `cryptovampire/doc`.\n\n"
+        "Reference of the `cryptovampire/*` scheme libraries and of the\n"
+        "Rust-exported builtin functions.\n"
+        "Generated from the `help` doc tables and the per-library documentation\n"
+        "tables (see `cryptovampire/doc`).\n\n"
         "Regenerate with:\n\n"
         "```sh\n"
         "cargo run --release -- crates/indistinguishability/scheme/docgen.scm\n"
         "```\n"))
     (doc-put "\n## Sorts & types\n")
-    (doc-put (types-section type-names))
-    (module-section "cryptovampire/stdlib" stdlib-fns '())
-    (module-section "cryptovampire/function" function-fns function-syntax)
-    (module-section "cryptovampire/formula" formula-fns formula-syntax)
-    (module-section "cryptovampire/protocol" protocol-fns protocol-syntax)
-    (module-section "cryptovampire/solver" solver-fns solver-syntax)
-    (module-section "cryptovampire/cryptography" cryptography-fns '())
-    (module-section "cryptovampire/signature" '() signature-syntax)))
+    (doc-put (table-entries->section sort-doc "###"))
+    (module-section "cryptovampire/stdlib" stdlib-fns #f)
+    (module-section "cryptovampire/function" function-fns function-doc)
+    (module-section "cryptovampire/formula" formula-fns formula-doc)
+    (module-section "cryptovampire/protocol" protocol-fns protocol-doc)
+    (module-section "cryptovampire/solver" solver-fns solver-doc)
+    (module-section "cryptovampire/cryptography" cryptography-fns #f)
+    (module-section "cryptovampire/signature" '() signature-doc)
+    (module-section "cryptovampire/builtin-functions" '() builtin-doc)))
 
 (displayln "wrote docs/scheme-api.md")

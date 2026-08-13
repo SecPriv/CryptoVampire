@@ -1,5 +1,4 @@
-(provide cv-help syntax-docs types-docs
-  register-syntax-doc! register-type-doc!)
+(provide cv-help make-doc-table doc-add!)
 
 (@doc "\
   Helpers used to build `@doc` docstrings for the `cryptovampire/*` libraries.
@@ -26,96 +25,37 @@
       "\n")))
 
 ;; ---------------------------------------------------------------------------
-;; Registries of documentation that cannot live in the `help` doc table (it only
-;; stores closures): the `syntax-docs` dictionary for syntax-rules macros and
-;; the `types-docs` dictionary for plain values (sorts & aliases).  They are
-;; consumed by `crates/indistinguishability/scheme/docgen.scm`.
+;; Per-library documentation tables.
+;;
+;; The `help` doc table only stores closures, so macros, plain sorts and
+;; re-exports cannot carry a `@doc`.  Such documentation lives in a small
+;; registry next to the definition, in the library that owns it.
+;;
+;; `make-doc-table` returns a fresh, empty documentation table and `doc-add!`
+;; records one entry.  Both are *pure* (`doc-add!` returns the new table), so
+;; they are safe to share across modules.
+;;
+;; Steel modules are evaluated once and their instances are *shared*, but
+;; `require`/`provide` copy *values* into the requirer: an imported top-level
+;; binding is a snapshot of that module's cell taken at import time and does
+;; not track later `set!`s.  Live module state is only observable *through a
+;; closure* defined in that module -- calling it reads/writes the module's own
+;; cell at call time (this is why `get-function`/`insert-function` around
+;; `function.scm`'s `functions-map` work across modules, and why the `@doc`
+;; `help` tables, which live in shared native/closure state, work everywhere).
+;;
+;; A centrally shared `syntax-docs`-style registry would therefore show up as
+;; an imported value snapshot that goes stale once the registering modules run:
+;; each owning library thus builds its own table with a local `register-*!`
+;; helper and exports the *finished* table -- reading back a complete value
+;; needs no live sharing at all.  This is the same shape as
+;; `cryptovampire/builtin-functions`' `builtin-doc`, which `mk_scheme_lib`
+;; builds up entirely inside the module body it emits (intra-module `set!`,
+;; then export the completed value).
+;; `crates/indistinguishability/scheme/docgen.scm` collects them to render
+;; `docs/scheme-api.md`.
 ;; ---------------------------------------------------------------------------
 
-(define syntax-docs (hash))
-(define types-docs (hash))
-
-(define (register-syntax-doc! name . doc)
-  (set! syntax-docs (hash-insert syntax-docs name (string-join doc "\n"))))
-
-(define (register-type-doc! name . doc)
-  (set! types-docs (hash-insert types-docs name (string-join doc "\n"))))
-
-;; ---------------- syntax rules (macros) ----------------
-
-
-(register-syntax-doc! 'forall
-  "Binds fresh universal variables of the given sorts and builds a `forall` formula over `body`.\n\n**Usage:**\n```scheme\n(forall ((i Index)) body)\n```")
-
-(register-syntax-doc! 'findst
-  "Builds a `find such-that` formula: binds the given vars, evaluates `cond` and `formula` over them, returns `result`.\n\n**Usage:**\n```scheme\n(findst ((i Index)) cond formula result)\n```")
-
-(register-syntax-doc! 'store-cell
-  (string-append
-    "Declares an update of a memory cell, to be used inside the `assignements`\n"
-    "function of a `step` (which returns a list of them).\n"
-    "\n**Usage:**\n```scheme\n"
-    "(list (store-cell s := mempty))                                  ; plain cell\n"
-    "(list (store-cell ((_) kT i) := (H (cells kT i) (key i))))       ; indexed cell\n"
-    "```"))
-
-(register-syntax-doc! 'bind
-  (string-append
-    "Binds each id to a fresh variable of the given sort, then evaluates `body`.\n"
-    "Used for context-wide lemmas/rewrites over fresh variables.\n"
-    "\n**Usage:**\n```scheme\n"
-    "(bind ((i Index) (j Index) (p Protocol))\n"
-    "  (add-rewrite pbl (rw.new \"lemma\" (list i j p) lhs rhs)))\n"
-    "```"))
-
-(register-syntax-doc! 'prolog
-  "Builds a prolog-style golgge rule `name` with body `from` and additional goals `to ...`; add it with `add-golgge-rule`.\n\n**Usage:**\n```scheme\n(prolog \"r\" (from) :- (goal-1) (goal-2))\n```")
-
-(register-syntax-doc! 'add-constrain
-  "Adds a constraint between steps, binding the given ids to fresh `Index` variables.\n\n**Usage:**\n```scheme\n(add-constrain pbl (i j) (lt (tag i) (r j)))\n```")
-
-(register-syntax-doc! 'publish
-  "Declares `term` (over the fresh vars of the given sorts) to be public knowledge.\n\n**Usage:**\n```scheme\n(publish pbl ((i Index)) (mexp g (a i)))\n```")
-
-(register-syntax-doc! 'signature
-  "A concise way to build a `Signature`: `(inputs ...) -> output`.  A bare sort is a nullary signature.\n\n**Usage:**\n```scheme\n(signature (Index Index) -> Nonce)\n(signature Nonce)   ; same as (signature () -> Nonce)\n```")
-
-;; ---------------- types & values ----------------
-
-(register-type-doc! 'Nonce
-  "A fresh nonce: an unpredictable value used once, typically as a key or seed.\nA function returning a `Nonce` gets wrapped (`wrap-nonce`) so it can be called in terms.")
-
-(register-type-doc! 'Bool
-  "The boolean sort.  Formula combinators such as `cand`, `cor`, `eq`, `lt` build `Bool` formulas.")
-
-(register-type-doc! 'Bitstring
-  "Raw bitstrings, the sort of messages.  Most cryptographic operations (hashing, encryption, xor, exponentiation) map bitstrings to bitstrings.")
-
-(register-type-doc! 'Message
-  "Alias of `Bitstring`: messages sent on the wire are bitstrings.")
-
-(register-type-doc! 'Time
-  "Times, used to order steps (`lt`, `leq`, `pred`, ...).  The `Step` of a step is the time at which it happens.")
-
-(register-type-doc! 'Protocol
-  "A protocol (a participant).  Declared with `declare-protocol`; steps and memory cells are instantiated per protocol.")
-
-(register-type-doc! 'Step
-  "Alias of `Time`.  A step is identified by the time at which it happens.")
-
-(register-type-doc! 'Index
-  "An index, used to range over repetitions (protocol runs, list elements, ...).  Binds fresh in `bind`, `exists`, `publish`, step declarations, ...")
-
-(register-type-doc! 'Any
-  "The top/unknown sort, used when a term's sort is not (yet) fixed.")
-
-(register-type-doc! 'Condition
-  "Alias of `Bool`: the sort of step run-conditions.")
-
-(register-type-doc! 'step
-  (string-append
-    "A step *instance*: one run of a step inside one protocol."
-    "Fields: `protocol`, `condition`, `message`, `assignements`.  Pass a list of them to `declare-step`."))
-
-(register-type-doc! 'tuple
-  "Synonym of `ctuple`: builds a tuple term from the given terms.")
+(define (make-doc-table) (hash))
+(define (doc-add! table name . doc)
+  (hash-insert table name (string-join doc "\n")))

@@ -2,13 +2,22 @@
   cand cor ctuple tuple
   exists forall findst
   mexists mforall mfindst
-  subst)
+  subst
+  formula-doc)
 (require "cryptovampire/function")
 (require "cryptovampire/doc")
 (require-builtin cryptovampire/ll/builtin-functions as funs->)
 (require-builtin cryptovampire/ll/variable as var->)
 (require-builtin cryptovampire/ll/formula as f->)
 (require-builtin cryptovampire/ll/signature as sig->)
+
+;; Documentation table for the `cryptovampire/formula` library (macro & value
+;; docs, next to their definitions).  See `cryptovampire/doc` for the mechanism.
+(define formula-doc (make-doc-table))
+(define (register-syntax-doc! name . doc)
+  (set! formula-doc (apply doc-add! formula-doc name doc)))
+(define (register-type-doc! name . doc)
+  (set! formula-doc (apply doc-add! formula-doc name doc)))
 
 
 ;; ---------------------------------------------------------------------------
@@ -42,6 +51,15 @@
   (syntax-rules ()
     [ (_ ((ids sorts) ...) arg)
       (mforall (list sorts ...) (lambda (ids ...) arg)) ]))
+
+(register-syntax-doc! 'forall
+  "Binds fresh universal variables of the given sorts and builds a `forall` formula over `body`."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(forall ((i Index)) body)"
+  "```")
+
 (define-syntax findst
   (syntax-rules ()
     [ (_ ((ids sorts) ...) arg1 arg2 arg3)
@@ -49,6 +67,14 @@
         (lambda (ids ...) arg1)
         (lambda (ids ...) arg2)
         arg3) ]))
+
+(register-syntax-doc! 'findst
+  "Builds a `find such-that` formula: binds the given vars, evaluates `cond` and `formula` over them, returns `result`."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(findst ((i Index)) cond formula result)"
+  "```")
 
 
 ;; This is some ChatGPT magic ^^''
@@ -106,6 +132,14 @@
   (define (ctuple . args) (f->ctuple args)))
 
 (define tuple ctuple)
+
+(register-type-doc! 'tuple
+  "Synonym of `ctuple`: builds a tuple term from the given terms."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(tuple a b c)"
+  "```")
 
 (@doc (cv-help "subst" "(subst a b f)"
     "Returns `f` with every occurrence of term `a` replaced by `b`."

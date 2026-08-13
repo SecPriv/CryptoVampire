@@ -14,7 +14,8 @@
   alias-rw
   define-function
   mk-alias-rw
-  convert-to-formula)
+  convert-to-formula
+  function-doc)
 (require-builtin cryptovampire/ll/function as fun->)
 (require-builtin cryptovampire/ll/builtin-functions as funs->)
 (require-builtin cryptovampire/ll/variable as var->)
@@ -28,6 +29,14 @@
 (require "cryptovampire/signature")
 (require "cryptovampire/doc")
 (require-builtin steel/hash)
+
+;; Documentation table for the `cryptovampire/function` library (macro docs,
+;; next to their definitions).  See `cryptovampire/doc` for the mechanism.
+(define function-doc (make-doc-table))
+(define (register-syntax-doc! name . doc)
+  (set! function-doc (apply doc-add! function-doc name doc)))
+(define (register-type-doc! name . doc)
+  (set! function-doc (apply doc-add! function-doc name doc)))
 
 (define functions-map (hash))
 

@@ -143,8 +143,7 @@ impl MFunction {
     }
 }
 
-fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {
-    // pub fn register_value_with_doc(
+fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {    // pub fn register_value_with_doc(
     // &mut self,
     // name: &'static str,
     // value: SteelVal,
@@ -211,13 +210,52 @@ pub fn mk_builtin_funs(input: TokenStream) -> TokenStream {
     let names = decls.iter().map(|f| f.as_owned());
     let alt_names = decls.iter().flat_map(|f| f.list_alt_names());
     let steel = mk_steel(&decls);
+    let docs = mk_builtin_docs(&decls);
 
     quote! {
         #(#defines)*
         pub static BUILTINS : &[Function] = &[#(#names),*];
         pub static PARSING_PAIRS: &[(&str, Function)] = &[#(#alt_names),*];
 
+        #docs
         #steel
     }
     .into()
+}
+
+/// Emits a `BUILTIN_DOCS` array mapping each builtin's *primary* name (its
+/// first alternative name) to its `///` documentation comment (the same text
+/// that is registered as the native module's `DocTemplate`).  Functions without
+/// a doc comment map to an empty string.
+///
+/// This is what lets `mk_scheme_lib` make the lifted wrappers *inherit* their
+/// unwrapped documentation.
+fn mk_builtin_docs(functions: &[MFunction]) -> proc_macro2::TokenStream {
+    let doc: Attribute = parse_quote!(#[doc = r"test"]);
+
+    let pairs = functions.iter().map(|f| {
+        let str_name = f.alt_names.first().unwrap();
+        let docs = f.attrs.iter().filter_map(|attr| match &attr.meta {
+            syn::Meta::NameValue(MetaNameValue { path, value, .. }) if path == doc.meta.path() => {
+                Some(value)
+            }
+            _ => None,
+        });
+        let joined = docs
+            .filter_map(|v| match v {
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(s),
+                    ..
+                }) => Some(s.value()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let joined = syn::LitStr::new(&joined, proc_macro2::Span::call_site());
+        quote! { (#str_name, #joined) }
+    });
+
+    quote! {
+        pub static BUILTIN_DOCS: &[(&str, &'static str)] = &[ #(#pairs),* ];
+    }
 }

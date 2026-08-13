@@ -4,7 +4,8 @@
   declare-step declare-same-step
   declare-memory-cell
   store-cell
-  empty-assignements)
+  empty-assignements
+  protocol-doc)
 (require-builtin cryptovampire/ll/pbl as pbl->)
 (require-builtin cryptovampire/ll/step as step->)
 (require-builtin cryptovampire/ll/formula as f->)
@@ -15,6 +16,14 @@
 (require "cryptovampire/doc")
 (require "cryptovampire/builtin-functions")
 (require (prefix-in t-> "cryptovampire/type"))
+
+;; Documentation table for the `cryptovampire/protocol` library (macro & value
+;; docs, next to their definitions).  See `cryptovampire/doc` for the mechanism.
+(define protocol-doc (make-doc-table))
+(define (register-syntax-doc! name . doc)
+  (set! protocol-doc (apply doc-add! protocol-doc name doc)))
+(define (register-type-doc! name . doc)
+  (set! protocol-doc (apply doc-add! protocol-doc name doc)))
 
 
 ;; ---------------------------------------------------------------------------
@@ -34,6 +43,13 @@
 
 (struct step (protocol condition message assignements))
 (struct assignement (cell single-assignement))
+
+(register-type-doc! 'step
+  "A step *instance*: one run of a step inside one protocol."
+  "Fields: `protocol`, `condition`, `message`, `assignements`.  Pass a list of
+  them to `declare-step`.")
+(register-type-doc! 'step-protocol
+  "The protocol (a participant) of a step instance.")
 
 (@doc (cv-help "empty-assignements" "(empty-assignements . _)"
     "A step that assigns nothing: use as the `assignements` field of a `step` when the step updates no memory cell.")
@@ -63,6 +79,15 @@
 ;; The left-hand side is the cell (with index variables); the right-hand side
 ;; is the new value term.
 ;; ---------------------------------------------------------------------------
+
+(register-syntax-doc! 'store-cell
+  "Declares an update of a memory cell, to be used inside the `assignements` function of a `step` (which returns a list of them)."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(list (store-cell s := mempty))                                  ; plain cell"
+  "(list (store-cell ((_) kT i) := (H (cells kT i) (key i))))       ; indexed cell"
+  "```")
 
 (define-syntax store-cell
   (syntax-rules (:=)

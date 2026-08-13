@@ -2,7 +2,8 @@
   bind prolog
   add-golgge-rule add-smt-axiom add-rewrite
   add-constrain publish
-  run mk-problem declare-protocol)
+  run mk-problem declare-protocol
+  solver-doc)
 (require-builtin cryptovampire/ll/variable as var->)
 (require-builtin cryptovampire/ll/formula as f->)
 (require-builtin cryptovampire/ll/pbl as pbl->)
@@ -15,16 +16,30 @@
 (require "cryptovampire/sort")
 (require "cryptovampire/doc")
 
+;; Documentation table for the `cryptovampire/solver` library (macro docs,
+;; next to their definitions).  See `cryptovampire/doc` for the mechanism.
+(define solver-doc (make-doc-table))
+(define (register-syntax-doc! name . doc)
+  (set! solver-doc (apply doc-add! solver-doc name doc)))
+(define (register-type-doc! name . doc)
+  (set! solver-doc (apply doc-add! solver-doc name doc)))
+
 ;; ---------------------------------------------------------------------------
 ;; bind
 ;;
 ;; Binds each id to a fresh variable of the given sort, then evaluates body.
-;; Used to state context-wide lemmas/rewrites over fresh variables:
-;; ```scheme
-;; (bind ((i Index) (j Index) (p Protocol))
-;;   (add-rewrite pbl (rw.new "lemma" (list i j p) ...)))
-;; ```
+;; Used to state context-wide lemmas/rewrites over fresh variables.
 ;; ---------------------------------------------------------------------------
+
+(register-syntax-doc! 'bind
+  "Binds each id to a fresh variable of the given sort, then evaluates `body`."
+  "Used for context-wide lemmas/rewrites over fresh variables."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(bind ((i Index) (j Index) (p Protocol))"
+  "  (add-rewrite pbl (rw.new \"lemma\" (list i j p) lhs rhs)))"
+  "```")
 
 (define-syntax bind
   (syntax-rules ()
@@ -38,6 +53,14 @@
 ;; goals `to ...`, e.g. `(prolog "r" (from) :- (goal-1) (goal-2))`.
 ;; Add the result to the problem with `add-golgge-rule`.
 ;; ---------------------------------------------------------------------------
+
+(register-syntax-doc! 'prolog
+  "Builds a prolog-style golgge rule `name` with body `from` and additional goals `to ...`; add it with `add-golgge-rule`."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(prolog \"r\" (from) :- (goal-1) (goal-2))"
+  "```")
 
 (define-syntax prolog
   (syntax-rules (:-)
@@ -87,6 +110,14 @@
 ;; variables: `(add-constrain pbl (i j) (lt (tag i) (r j)))`.
 ;; ---------------------------------------------------------------------------
 
+(register-syntax-doc! 'add-constrain
+  "Adds a constraint between steps, binding the given ids to fresh `Index` variables."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(add-constrain pbl (i j) (lt (tag i) (r j)))"
+  "```")
+
 (define-syntax add-constrain
   (syntax-rules ()
     [ (_ pbl (vars ...) constrain)
@@ -99,6 +130,14 @@
 ;; Declares `term` (over the fresh vars of the given sorts) to be public
 ;; knowledge: `(publish pbl ((i Index)) (mexp g (a i)))`.
 ;; ---------------------------------------------------------------------------
+
+(register-syntax-doc! 'publish
+  "Declares `term` (over the fresh vars of the given sorts) to be public knowledge."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(publish pbl ((i Index)) (mexp g (a i)))"
+  "```")
 
 (define-syntax publish
   (syntax-rules ()
