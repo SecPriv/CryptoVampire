@@ -1,0 +1,115 @@
+/*
+Prove the add-rewrite (the "lemma" rewrite) for the right protocol (p2).
+In this protocol the key depends on both indices: mk!(i,j) = key(i,j).
+The rewrite states that when Reader(j) executes, its output (mk-fdst1) equals
+the idealized output (mk-fdst2).
+*/
+type index;
+
+fun key(index, index):Name;
+let mk!(i:index, j:index) = key(i, j)
+
+fun nr(index):Name;
+fun nt(index,index):Name;
+
+fun rt(index, index):Name;
+fun rr(index):Name;
+
+fun ok:Message;
+fun ko:Message;
+
+fun tagR:Message;
+fun tagT:Message;
+assert (tagT != tagR);
+
+fun enc(Message, Message, Message):Message;
+fun dec(Message, Message):Message;
+fun fail:Message;
+assert-crypto int-ctxt enc dec  fail;
+
+assert-crypto nonce;
+
+fun tpl(Message, Message):Message;
+fun fst(Message):Message;
+fun snd(Message):Message;
+
+assert forall (m1:Message, m2:Message) {(
+    (m1 == fst(tpl(m1, m2)))
+    && (m2 == snd(tpl(m1, m2)))
+)}
+
+assert forall (m1:Message, m2:Message) {(
+    fail != tpl(m1, m2)
+)}
+
+assert (fst(fail) == fail)
+assert (snd(fail) == fail)
+
+step Tag(i:index, j:index)
+    { true }
+    { enc(
+        tpl(tagT, tpl(input(Tag(i, j)), nt(i, j))),
+        rt(i,j),
+        mk!(i,j)
+    ) }
+
+let m_cond!(i:index, j:index, k:index, m:Message) = (
+    (dec(m, mk!(i,j)) != fail)
+    && (fst(dec(m, mk!(i,j))) == tagT )
+    && (fst(snd(dec(m, mk!(i,j)))) == nr(k) )
+)
+
+step Reader0(k:index)
+    { true }
+    { nr(k) }
+
+step Reader(k:index)
+    { true }
+    {
+        try find (i:index, j:index)
+            such that { m_cond!(i, j, k, input(Reader(k))) }
+            then { enc(
+                tpl(tagR,tpl(snd(snd(dec(input(Reader(k)), mk!(i,j)))), nr(k))),
+                rr(k),
+                mk!(i,j)
+            ) }
+            else { ko }
+    }
+
+order forall (k:index) Reader0(k) < Reader(k);
+
+/* base cryptovampire doesn't natively support `exec` in protocol/query definition,
+   hence we redefine it here (see the ddh examples). */
+let exec_pred!(t:Step) = (
+    happens(t) &&
+    forall (i:index, j:index) {(lt(Tag(i,j), t) => cond!(Tag(i,j)))} &&
+    forall (k:index) {(lt(Reader0(k), t) => cond!(Reader0(k)))} &&
+    forall (k:index) {(lt(Reader(k), t) => cond!(Reader(k)))}
+)
+
+/* The idealized output of Reader(j): this is mk-fdst2 (Reader(j), j, p). */
+let fdst2!(j:index) =
+    if exists (i:index, k:index) {(
+        (input(Reader(j)) == msg!(Tag(i,k)))
+        && lt(Tag(i,k), Reader(j))
+        && exec_pred!(Reader(j))
+    )}
+    { try find (i:index, k:index)
+        such that { (input(Reader(j)) == msg!(Tag(i,k))) }
+        then { enc(
+            tpl(tagR, tpl(nr(j), nt(i,k))),
+            rr(j),
+            mk!(i,k)
+        ) }
+        else { ko } }
+    else { ko }
+
+/* The add-rewrite: the output of Reader(j) equals the idealized output.
+   This mirrors the scheme rewrite
+     (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
+     (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)  */
+query forall (j:index) {(
+    if exec_pred!(Reader(j)) { msg!(Reader(j)) } else { empty }
+    ==
+    if exec_pred!(Reader(j)) { fdst2!(j) } else { empty }
+)}

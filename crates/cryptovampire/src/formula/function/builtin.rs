@@ -14,6 +14,7 @@ use super::inner::term_algebra::{self, TermAlgebra};
 use super::{Function, InnerFunction, new_static_function};
 use crate::container::StaticContainer;
 use crate::formula::formula::{ARichFormula, RichFormula};
+use crate::formula::function::inner::term_algebra::base_function::BaseFunction;
 use crate::formula::sort::builtins::{BITSTRING, BOOL, CONDITION, MESSAGE, STEP};
 
 macro_rules! builtin {
@@ -150,6 +151,19 @@ pub static LESS_THAN_STEP: Function<'static> =
     }));
 
 #[dynamic]
+pub static LESS_THAN_STEP_SYMBOLIC : Function<'static> =
+    new_static_function(InnerFunction::TermAlgebra(
+        TermAlgebra::Function(
+            BaseFunction {
+                name: "s_lt".into(),
+                args: Box::new([*STEP, *STEP]),
+                out: *CONDITION,
+                eval_fun: *LESS_THAN_STEP
+            }
+        )
+    ));
+
+#[dynamic]
 pub static GREATER_THAN_STEP: Function<'static> =
     new_static_function(InnerFunction::Predicate(Predicate {
         name: "gt".into(),
@@ -171,6 +185,20 @@ pub static HAPPENS: Function<'static> = new_static_function(InnerFunction::Predi
     args: Box::new([*STEP]),
     // out: BOOL.clone(),
 }));
+
+
+#[dynamic]
+pub static HAPPENS_SYMBOLIC : Function<'static> =
+    new_static_function(InnerFunction::TermAlgebra(
+        TermAlgebra::Function(
+            BaseFunction {
+                name: "s_happens".into(),
+                args: Box::new([*STEP]),
+                out: *CONDITION,
+                eval_fun: *HAPPENS
+            }
+        )
+    ));
 
 #[dynamic]
 pub static IF_THEN_ELSE_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
@@ -260,5 +288,7 @@ builtin!(
     PRED,
     CONDITION_MACRO,
     MESSAGE_MACRO,
-    EXEC_MACRO
+    EXEC_MACRO,
+    LESS_THAN_STEP_SYMBOLIC,
+    HAPPENS_SYMBOLIC
 );
