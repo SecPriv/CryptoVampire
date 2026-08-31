@@ -1,3 +1,8 @@
+/*
+The lemma used for indistinguishability.
+Here is the left protocol
+*/
+
 type index;
 fun tpl(Message, Message):Message
 
@@ -62,7 +67,8 @@ let pchall3_cond!(i:index, j:index) = (gS!(i) == mexp(g, b(j)))
 step Pchall3(i:index, j:index) {(
     cond!(Pchall2(i)) && pchall3_cond!(i, j)
 )} {
-    mexp(mexp(g, a(i)), b(j))
+    /*mexp(mexp(g, a(i)), b(j))*/
+    mexp(g, k(i,j))
 }
 
 step Pchall3bis(i:index) {(
@@ -121,22 +127,6 @@ assert
 assert-crypto euf-cma sign checksign pk;
 assert-crypto nonce;
 
-/* required to trigger the heuristic */
-lemma forall (i:index) {
-    (cond!(Pchall2(i)) <=> (checksign(
-                msnd(input(Pchall2(i))),
-                tpl( 
-                    tpl( 
-                        mexp(g, a(i)), 
-                        gS!(i) 
-                    ),
-                    pk(skP)
-                ),
-                pk(skS))
-                && ( mfst(mfst(input(Pchall2(i)))) == pk(skS) ) 
-                ))
-}
-
 /* P_charac */
 /*lemma forall (i:index) {(
     happens(Pchall2(i)) => 
@@ -144,7 +134,9 @@ lemma forall (i:index) {
             exists (j:index) {(msnd(mfst(input(Pchall2(i)))) == mexp(g, b(j)))})
 )}*/
 
+/* base cryptovampire doesn't natively support `exec` in protocol/query definition, hence we redefine it here */
 let exec_pred!(t:Step) = (
+    happens(t) &&
     forall (i:index) {(lt(Pchall1(i), t) => cond!(Pchall1(i)))} &&
     forall (i:index) {(lt(Pchall2(i), t) => cond!(Pchall2(i)))} &&
     forall (i:index) {(lt(Pchall3bis(i), t) => cond!(Pchall3bis(i)))} &&
@@ -153,11 +145,6 @@ let exec_pred!(t:Step) = (
     forall (i:index) {(lt(S2(i), t) => cond!(S2(i)))} 
 )
 
-let mquery!(t:Step) = (
-    happens(t) => ((exec_pred!(t) && cond!(t)) <=> false)
-)
-
-query forall (j:index, i:index) {(
-    (happens(Pchall3bis(i)) => ((exec_pred!(Pchall3bis(i)) && cond!(Pchall3bis(i))) <=> false)) &&
-    true
-)}
+query forall (j:index, i:index) {
+    ((exec_pred!(Pchall3bis(i)) && cond!(Pchall3bis(i))) <=> false)
+}

@@ -15,13 +15,13 @@ fun ko:Message
 /* the Names */
 fun nt(session, index): Name
 fun nr(session): Name
-fun key(index):Name
+fun key(session, index):Name
 
 let mcond!(i:session, j:index, in:Message) =
     verify(
         sel2of2(in),
         sel1of2(in),
-        key(j)
+        key(i, j)
     )
 
 step reader(i:session, j:index)
@@ -38,7 +38,7 @@ step tag(i:session, j:index)
         nt(i,j),
         hash(
             nt(i,j),
-            key(j)
+            key(i, j)
         )
     )}
 
@@ -63,14 +63,16 @@ order forall (i:session, j:index, j2:index)
 
 let conclusion!(i:session, j:index, t:Step) = exists (k:session) {
     let m_in: Message = input(t) in 
-    (lt(tag(k, j),t)
-    && (sel1of2(msg!(tag(k, j))) == sel1of2(m_in))
-    && (sel2of2(msg!(tag(k, j))) == sel2of2(m_in))
+    (lt(tag(i, j), t)
+    && (sel1of2(msg!(tag(i, j))) == sel1of2(m_in))
+    && (sel2of2(msg!(tag(i, j))) == sel2of2(m_in))
 )}
 
-query forall (i:session, j:index, t:Step) {(
-    conclusion!(i, j, t) <=> mcond!(i, j, input(t))
-)}
+let premise!(i:session, j:index) = cond!(reader(i, j))
+
+query forall (i:session, j:index, t:Step) {
+    (conclusion!(i, j, t) <=> mcond!(i,j,input(t)))
+}
 
 assert-crypto euf-cma hash verify;
-assert-crypto nonce; /* This can actually be commented out, but the no-guessing theorem is still assumed anyway */
+assert-crypto nonce;
