@@ -28,19 +28,27 @@ all: $(RESULTS)
 # Compile the crate and update the local binary if the build artifact changed.
 # We force cargo build to run every time to let it decide if recompilation is needed.
 # We only touch the local binary if the new build artifact is different to avoid unnecessary test runs.
+#
+# If CV2_NO_BUILD=1 (as set inside the docker artifact image, which ships a
+# prebuilt ./cryptovampire2) the cargo build is skipped entirely and the
+# shipped binary is used as-is.
 $(BINARY): force_cargo
-	@if [ ! -f "$(BUILD_DIR)/$(BINARY_NAME)" ]; then \
-		echo "Error: Build artifact not found at $(BUILD_DIR)/$(BINARY_NAME)"; \
-		exit 1; \
-	fi
-	@if [ ! -f "$@" ] || ! cmp -s "$(BUILD_DIR)/$(BINARY_NAME)" "$@"; then \
-		cp "$(BUILD_DIR)/$(BINARY_NAME)" "$@"; \
-		echo "Updated $(BINARY)"; \
+	@if [ -z "$$CV2_NO_BUILD" ]; then \
+		if [ ! -f "$(BUILD_DIR)/$(BINARY_NAME)" ]; then \
+			echo "Error: Build artifact not found at $(BUILD_DIR)/$(BINARY_NAME)"; \
+			exit 1; \
+		fi; \
+		if [ ! -f "$@" ] || ! cmp -s "$(BUILD_DIR)/$(BINARY_NAME)" "$@"; then \
+			cp "$(BUILD_DIR)/$(BINARY_NAME)" "$@"; \
+			echo "Updated $(BINARY)"; \
+		fi \
 	fi
 
 .PHONY: force_cargo
 force_cargo:
-	cd $(CRATE_DIR) &&  cargo lbuild --release
+	@if [ -z "$$CV2_NO_BUILD" ]; then \
+		cd $(CRATE_DIR) &&  cargo lbuild --release; \
+	fi
 
 # Run tests to generate results.csv
 # Invalidates if the binary changes or any source file changes.
