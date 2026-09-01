@@ -90,9 +90,12 @@ let exec_pred!(t:Step) = (
 /* The idealized output of Reader(j): this is mk-fdst2 (Reader(j), j, p). */
 let fdst2!(j:index) =
      try find (i:index, k:index)
-        such that { ((input(Reader(j)) == msg!(Tag(i,k)))
+        such that { (
+        (input(Reader(j)) == msg!(Tag(i,k)))
+        && (input(Tag(i,k)) == msg!(Reader0(j)))
         && s_lt(Tag(i,k), Reader(j))
-        && exec_pred!(Reader(j))) }
+        && exec_pred!(Reader(j)) && cond!(Reader(j))
+        ) }
         then { enc(
             tpl(tagR, tpl(nt(i,k), nr(j))),
             /*tpl(tagR,tpl(snd(snd(dec(input(Reader(k)), mk!(i,j)))), nr(k))),*/
@@ -116,7 +119,7 @@ let conclusion!(k:index) = exists (i:index, j:index) {(
      (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
      (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)  */
 query forall (j:index) {(
-     msg!(Reader(j))
+    if (exec_pred!(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
     ==
-    fdst2!(j)
+    if (exec_pred!(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
 )}
