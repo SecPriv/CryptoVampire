@@ -19,6 +19,12 @@
 # For container mode, how docker is invoked comes from the DOCKER environment
 # variable (the Makefile sets it to a plain `docker` or a group-restricted
 # `sudo -u $USER -g docker` command, see the Makefile).
+#
+# NOTE: container mode builds the whole closure into a cold nix store inside
+# the container, so it needs ~15-25 GB of free disk, a few minutes to tens of
+# minutes of CPU, and network for nix inputs.  Prefer `auto` (host nix, cached)
+# or a pulled/pushed image; container mode is a fallback for machines that
+# have neither nix nor a prebuilt image.
 set -euo pipefail
 
 target="${1:?flake target missing (docker|docker-shell)}"

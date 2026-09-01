@@ -114,6 +114,21 @@ docker run --rm -i -v "$PWD":/mnt:ro --workdir /tmp nixos/nix \
   sh -c 'nix build /mnt#docker -o result 1>&2 && cat result' | docker load
 ```
 
+The root `Makefile` wraps all of this.  `IMAGE_BUILD` selects the strategy
+(`auto` = host nix if available, else the container; `host`; `container`),
+and `DOCKER` picks a plain `docker` or a group-scoped `sudo -u $USER -g docker`
+escalation automatically:
+
+```sh
+make enter-shell          # host nix -> build -> load -> shell
+make enter-shell IMAGE_BUILD=container   # force the nixos/nix container path
+make test-artifact
+make test-solvers-parallel
+```
+
+Container mode rebuilds the whole closure in a cold store, so it needs
+~15-25 GB free disk + network; prefer `auto`/host-nix or a prebuilt image.
+
 ## Reproducibility & integrity
 
 Everything is pinned in-tree:
