@@ -9,14 +9,14 @@ BOOK_DIR := $(PROJECT_DIR)/docs
 
 .PHONY: cryptovampire2 cryptovampire doc html
 
-cryptovampire:
-	cargo build --release -p cryptovampire
-	cp $(BUILD_DIR)/cryptovampire $(CRYPTOVAMPIRE)
-
 cryptovampire2:
 	mkdir -p $(OUT_DIR)
 	cargo build --release -p cryptovampire2
 	cp $(BUILD_DIR)/cryptovampire2 $(CRYPTOVAMPIRE2)
+
+cryptovampire:
+	cargo build --release -p cryptovampire
+	cp $(BUILD_DIR)/cryptovampire $(CRYPTOVAMPIRE)
 
 doc: cryptovampire2 $(PROJECT_DIR)/crates/cryptovampire2/scheme/docgen.scm
 	mkdir -p $(OUT_DIR)
@@ -31,3 +31,21 @@ html: doc
 	mkdir -p $(OUT_DIR)
 	rm -rf $(OUT_DIR)/book
 	cp -r $(BOOK_DIR)/book $(OUT_DIR)
+
+docker/cryptovampire2-artifact: 
+	mkdir -p docker
+	nix build .#docker
+	cp result docker/cryptovampire2-artifact
+
+docker/cryptovampire2-artifact-shell: 
+	mkdir -p docker
+	nix build .#docker-shell
+	cp result docker/cryptovampire2-artifact-shell
+
+test-artifact: docker/cryptovampire2-artifact
+	sudo docker load < docker/cryptovampire2-artifact
+	docker run cryptovampire2-artifact
+
+enter-shell: docker/cryptovampire2-artifact-shell
+	sudo docker load < docker/cryptovampire2-artifact-shell
+	docker run cryptovampire2-artifact-shell

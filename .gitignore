@@ -21,3 +21,4 @@ docker/*.tar*
 
 docs/scheme-api.md
 docs/book/
+docker

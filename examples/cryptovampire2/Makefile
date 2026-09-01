@@ -47,7 +47,7 @@ $(BINARY): force_cargo
 .PHONY: force_cargo
 force_cargo:
 	@if [ -z "$$CV2_NO_BUILD" ]; then \
-		cd $(CRATE_DIR) &&  cargo lbuild --release; \
+		cd $(CRATE_DIR) &&  cargo build --release; \
 	fi
 
 # Run tests to generate results.csv
