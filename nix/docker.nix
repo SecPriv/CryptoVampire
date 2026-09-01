@@ -22,7 +22,7 @@
 { self, inputs, lib, config, ... }:
 {
   perSystem =
-    { self', pkgs, system, ... }:
+    { self', pkgs, system, config, ... }:
     let
       # ------------------------------------------------------------------
       # Contents of the image
@@ -68,8 +68,26 @@
       # image is fully self-contained at runtime (no nix daemon, no network).
       root = pkgs.runCommand "cryptovampire2-root" { } ''
         mkdir -p $out
-        ln -s ${env} $out/bin
+        ln -s ${env}/bin $out/bin
         ln -s ${src} $out/cryptovampire2
+        # Keep the entrypoint script in the packed closure (it is only listed
+        # as a string in the image config, so it must also be reachable from
+        # the root tree to end up in the layer).
+        ln -s ${prepare} $out/prepare-workspace
+        # The image has no base OS layer, so provide the standard writable
+        # scratch dirs tools expect (tempfile/SMT sink, steel home parents),
+        # plus a minimal /etc for user/group lookups (dockerTools.buildImage
+        # has no enableFakeNss).
+        mkdir -p $out/tmp/.local/share/steel $out/var/tmp $out/etc
+        chmod 1777 $out/tmp $out/var/tmp
+        cat > $out/etc/passwd <<EOF
+root:x:0:0:root:/root:/bin/bash
+nobody:x:65534:65534:nobody:/var/empty:/bin/false
+EOF
+        cat > $out/etc/group <<EOF
+root:x:0:
+nogroup:x:65534:
+EOF
       '';
 
       # ------------------------------------------------------------------
@@ -82,7 +100,7 @@
         set -e
         export PATH=/bin:/usr/bin
         export CV2_NO_BUILD=1   # harness Makefile: do not try to cargo-build
-        if [ ! -e /workspace/cryptovampire2 ]; then
+        if [ ! -e /workspace/cryptovampire2/Cargo.toml ]; then
           echo "[cryptovampire2] copying baked-in source to /workspace (one-time)..."
           mkdir -p /workspace/cryptovampire2
           cp -r /cryptovampire2/. /workspace/cryptovampire2/
@@ -100,7 +118,7 @@
       '';
 
       common = {
-        contents = [ root ];
+        copyToRoot = root;
         config = {
           Env = [
             "PATH=/bin:/usr/bin"
@@ -118,7 +136,7 @@
           tag = builtins.substring 0 8 self.rev or "dev";
           config = common.config // {
             Cmd = [ "make" ];
-            Entrypoint = [ prepare ];
+            Entrypoint = [ "/prepare-workspace" ];
             WorkingDir = "/workspace/cryptovampire2/examples/cryptovampire2";
           };
         });
@@ -129,7 +147,7 @@
           tag = builtins.substring 0 8 self.rev or "dev";
           config = common.config // {
             Cmd = [ "/bin/bash" "-i" ];
-            Entrypoint = [ prepare ];
+            Entrypoint = [ "/prepare-workspace" ];
             WorkingDir = "/workspace/cryptovampire2/examples/cryptovampire2";
           };
         });

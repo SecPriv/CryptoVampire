@@ -53,6 +53,7 @@ force_cargo:
 # Run tests to generate results.csv
 # Invalidates if the binary changes or any source file changes.
 $(RESULTS): $(BINARY) $(SOURCES)
+	@mkdir -p $(CURRENT_DIR)results
 	@echo "Generating $(RESULTS)..."
 	@rm -f $(RESULTS)
 	@for file in $(SOURCES); do \
