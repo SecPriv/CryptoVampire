@@ -99,27 +99,13 @@ let premise!(j:index) =
     /* cond(reader(i,j)) */
     exists (i:index, k:index) { condition_fst!(i, j, k) }
 
-query forall (tau:Step, r:index) {(
-    exists (i:index, t:index) {
-        verify(
-            m_xor(id(i, t), sel2of2(input(tau))),
-            tpl(
-                tpl(
-                    nr(r),
-                    sel1of2(input(tau))
-                ),
-                tag1
-            ), key(i, t)
-            )
-    } <=>
-    exists (i:index, t:index) {(
-        lt(tag(i, t), tau) &&
-        (sel1of2(msg!(tag(i, t))) == sel1of2(input(tau))) &&
-        (sel2of2(msg!(tag(i, t))) == sel2of2(input(tau))) &&
-        lt(reader1(r),tag(i, t)) &&
-        (msg!(reader1(r)) == input(tag(i, t)))
-    )}
-)}
+let premise2!(tau:Step, r:index) = exists (i:index, t:index) { verify(m_xor(id(i, t), sel2of2(input(tau))), tpl(tpl(nr(r),sel1of2(input(tau))), tag1), key(i, t)) }
+
+let conclusion2!(tau:Step, r:index) = exists (i:index, t:index) {( lt(tag(i, t), tau) && (sel1of2(msg!(tag(i, t))) == sel1of2(input(tau))) && (sel2of2(msg!(tag(i, t))) == sel2of2(input(tau))) && lt(reader1(r),tag(i, t)) && (msg!(reader1(r)) == input(tag(i, t))) )}
+
+lemma forall (tau:Step, r:index) {( premise2!(tau,r) => conclusion2!(tau,r) )}
+lemma forall (tau:Step, r:index) {( conclusion2!(tau,r) => premise2!(tau,r) )}
+query forall (tau:Step, r:index) {true}
 
 assert-crypto euf-cma hash verify;
 assert-crypto nonce;
