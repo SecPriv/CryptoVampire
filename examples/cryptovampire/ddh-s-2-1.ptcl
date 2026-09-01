@@ -58,7 +58,7 @@ step S2(j:index)
 let challenge!(i:index, j:index) = (gp!(j) == mexp(g, a(i)))
 step Schall_succ(i:index, j:index)
     {(cond!(S2(j)) && challenge!(i, j))}
-    { whatever }
+    { mexp(mexp(g, a(i)), b(j)) }
 
 step Schall_fail(j:index)
     {(cond!(S2(j)) && not(exists (i:index) {challenge!(i, j)}))}
@@ -69,18 +69,6 @@ order forall (i:index, j:index) { S2(j) < Schall_succ(i, j)}
 order forall ( j:index) { S2(j) < Schall_fail(j)}
 order forall(i:index, j:index, j2:index) { Schall_succ(i, j) <> Schall_succ(i, j2)}
 order forall(i:index, j:index) { Schall_succ(i, j) <> Schall_fail(i)}
-
-
-/* phatom lemmas to trigger the preprocessing */
-lemma forall(i:index) {(
-    ( checksign(msnd(x2!(i)), tpl(tpl(mexp(g, a(i)), gS!(i)), pk(skP)), pkS!(i)) && (pkS!(i) == pk(skS)) )
-    => checksign(msnd(x2!(i)), tpl(tpl(mexp(g, a(i)), gS!(i)), pk(skP)), pk(skS))
-)}
-
-lemma forall(j:index) {(
-    ( checksign(x3!(j), tpl(tpl(mexp(g, b(j)), gp!(j)), pk(skS)), pkp!(j)) && (pkp!(j) == pk(skP)) )
-    => checksign(x3!(j), tpl(tpl(mexp(g, b(j)), gp!(j)), pk(skS)), pk(skP))
-)}
 
 /* query */
 
@@ -93,6 +81,7 @@ assert
     }
 
 let exec!(t:Step) = (
+    happens(t) &&
     forall (i:index) {((lt(P1(i), t) || (P1(i) == t)) => cond!(P1(i)))} &&
     forall (i:index) {((lt(P2(i), t) || (P2(i) == t)) => cond!(P2(i)))} &&
     forall (i:index) {((lt(S1(i), t) || (S1(i) == t)) => cond!(S1(i)))} &&
@@ -104,6 +93,5 @@ let exec!(t:Step) = (
 
 /* S_charac */
 query forall (j:index) {(
-    happens(Schall_fail(j)) => 
-        ((exec!(pred(Schall_fail(j))) && cond!(Schall_fail(j))) <=> false)
+        (exec!(pred(Schall_fail(j))) && cond!(Schall_fail(j))) <=> false
 )}

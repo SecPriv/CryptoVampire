@@ -228,6 +228,9 @@ fn evaluate_rewrite(
         return;
     }
 
+    for f in ctx.ta_funs.iter() {
+        crate::log::trace!("[DBG] tafun {} special={} out={:?}", f.name(), f.is_special_evaluate(), f.get_output_sort());
+    }
     for f in ctx.ta_funs.iter().filter(|&f| !f.is_special_evaluate()) {
         if &f.get_output_sort() == msg {
             let vars = sorts_to_variables(0, f.input_sorts_iter());

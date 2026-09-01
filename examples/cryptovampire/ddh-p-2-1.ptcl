@@ -1,5 +1,6 @@
 /*
-One first property on DDH
+The lemma used for indistinguishability.
+Here is the left protocol
 */
 type index;
 fun tpl(Message, Message):Message
@@ -124,26 +125,25 @@ assert
 assert-crypto euf-cma sign checksign pk;
 assert-crypto nonce;
 
-/* required to trigger the heuristic */
-/* but never proven nor asserted */
-/*lemma forall (i:index) {
-    (cond!(Pchall2(i)) <=> (checksign(
-                msnd(input(Pchall2(i))),
-                tpl( 
-                    tpl( 
-                        mexp(g, a(i)), 
-                        gS!(i) 
-                    ),
-                    pk(skP)
-                ),
-                pk(skS))
-                && ( mfst(mfst(input(Pchall2(i)))) == pk(skS) ) 
-                ))
-}*/
 
 /* P_charac */
-query forall (i:index) {(
+/*lemma forall (i:index) {(
     happens(Pchall2(i)) => 
         (cond!(Pchall2(i)) =>
             exists (j:index) {(msnd(mfst(input(Pchall2(i)))) == mexp(g, b(j)))})
+)}*/
+
+let exec_pred!(t:Step) = (
+    happens(t) &&
+    forall (i:index) {(lt(Pchall1(i), t) => cond!(Pchall1(i)))} &&
+    forall (i:index) {(lt(Pchall2(i), t) => cond!(Pchall2(i)))} &&
+    forall (i:index) {(lt(Pchall3bis(i), t) => cond!(Pchall3bis(i)))} &&
+    forall (i:index, j:index) {(lt(Pchall3(i, j), t) => cond!(Pchall3(i, j)))} &&
+    forall (i:index) {(lt(S1(i), t) => cond!(S1(i)))} &&
+    forall (i:index) {(lt(S2(i), t) => cond!(S2(i)))} 
+)
+
+
+query forall (j:index, i:index) {(
+     (exec_pred!(Pchall3bis(i)) && cond!(Pchall3bis(i))) <=> false
 )}
