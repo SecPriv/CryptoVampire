@@ -32,27 +32,32 @@
       # target/, result/, results/, .direnv/...; see .gitignore).
       src = lib.cleanSource self;
 
-      binary = self'.packages.cryptovampire2;
 
-      solvers = [
+
+      binaries = [
+          cryptovampire2 self'.packages.cryptovampire] ;
+
+      cryptovampire2 = self'.packages.cryptovampire2;
+
+      solvers =with pkgs;  [
         config.packages.vampire-4 # exactly what the dev shell exposes
-        pkgs.z3
-        pkgs.cvc5
+        z3
+        cvc5
       ];
 
       # Tools needed by the harness Makefile and the python test driver.
-      tools = [
-        pkgs.bash
-        pkgs.coreutils
-        pkgs.gnumake
-        pkgs.python3
-        pkgs.git
-        pkgs.gnugrep
-        pkgs.gnused
-        pkgs.gawk
-        pkgs.findutils
-        pkgs.which
-        pkgs.diffutils
+      tools = with pkgs; [
+        bash
+        coreutils
+        gnumake
+        python3
+        git
+        gnugrep
+        gnused
+        gawk
+        findutils
+        which
+        diffutils
       ];
 
       # Merge everything into one `bin` (like `nix develop`'s PATH).  The
@@ -60,7 +65,7 @@
       # enough (no numpy/z3 python wrappers).
       env = pkgs.buildEnv {
         name = "cryptovampire2-env";
-        paths = tools ++ solvers ++ [ binary ];
+        paths = tools ++ solvers ++ binaries;
       };
 
       # The filesystem tree placed at the image root.  dockerTools packs the
@@ -107,7 +112,7 @@ EOF
         fi
         # (re)point the harness at the prebuilt binary so `make` has nothing to build
         mkdir -p /workspace/cryptovampire2/examples/cryptovampire2
-        ln -sf ${binary}/bin/cryptovampire2 \
+        ln -sf ${cryptovampire2}/bin/cryptovampire2 \
                /workspace/cryptovampire2/examples/cryptovampire2/cryptovampire2
         cd /workspace/cryptovampire2/examples/cryptovampire2
         export HOME=/tmp
@@ -127,13 +132,14 @@ EOF
           ];
         };
       };
+                tag = "latest" ;# builtins.substring 0 8 self.rev or "dev";
     in
     {
       packages = {
         # `docker run <img>` -> runs the harness Makefile `all` target
         docker = pkgs.dockerTools.buildImage (common // {
+          inherit tag;
           name = "cryptovampire2-artifact";
-          tag = builtins.substring 0 8 self.rev or "dev";
           config = common.config // {
             Cmd = [ "make" ];
             Entrypoint = [ "/prepare-workspace" ];
@@ -143,8 +149,8 @@ EOF
 
         # `docker run -it <img>` -> drops into a shell with all tools
         docker-shell = pkgs.dockerTools.buildImage (common // {
+          inherit tag;
           name = "cryptovampire2-artifact-shell";
-          tag = builtins.substring 0 8 self.rev or "dev";
           config = common.config // {
             Cmd = [ "/bin/bash" "-i" ];
             Entrypoint = [ "/prepare-workspace" ];

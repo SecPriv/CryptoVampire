@@ -6,14 +6,15 @@
       rust-project.src =
         let
           craneLib = config.rust-project.crane-lib;
+          suffixes = [".txt" ".scm" ".pest" "/canauth.json" "/full1.json"];
         in
         lib.cleanSourceWith {
           src = self;
           filter =
             path: type:
             (craneLib.filterCargoSources path type)
-            || (lib.hasSuffix ".txt" path)
-            || (lib.hasSuffix ".scm" path);
+            || builtins.any (s: lib.hasSuffix s path) suffixes
+            ;
         };
     };
 }

@@ -38,7 +38,8 @@ macro_rules! unreachable_rules {
 
 macro_rules! debug_rule {
     ($p:ident, $($rule:ident)|+) => {
-        if cfg!(debug_assertions) && match $p.as_rule() {
+        #[cfg(debug_assertions)]
+        if match $p.as_rule() {
                 $(Rule::$rule)|+ => false,
                 _ => true
             }
