@@ -45,6 +45,7 @@ bitflags! {
         const ASSERT_GROUND =           1 << 8; // non smt standard
         const IGNORE_LEMMAS =           1 << 9;
         const DISALLOW_SHADOWING =      1 << 10;
+        const PAIRWISE_FIND_FA =        1 << 11; // experimental: trusted pairwise find-fa axiom
 
         const NON_SMT_STANDARD =
             Flags::ASSERT_NOT.bits()
@@ -135,6 +136,11 @@ impl<'bump> Environement<'bump> {
     /// Use the `legacy-evaluate`
     pub fn use_legacy_evaluate(&self) -> bool {
         self.options.flags.contains(Flags::LEGACY_EVALUATE) && self.is_symbolic_realm()
+    }
+
+    /// experimental: emit the pairwise find-such-that FA axiom (trusted)
+    pub fn pairwise_find_fa(&self) -> bool {
+        self.options.flags.contains(Flags::PAIRWISE_FIND_FA)
     }
 
     /// the evaluated realm is never used

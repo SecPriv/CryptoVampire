@@ -1,24 +1,25 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 use itertools::Itertools;
+use logic_formula::iterators::UsedVariableIterator;
 use log::trace;
 
 use crate::environement::environement::Environement;
 use crate::formula::file_descriptior::axioms::{Axiom, Rewrite, RewriteKind};
 use crate::formula::file_descriptior::declare::Declaration;
-use crate::formula::formula::{self, meq};
-use crate::formula::function::builtin::{EQUALITY, IF_THEN_ELSE, BUILT_IN_FUNCTIONS};
+use crate::formula::formula::{self, meq, ARichFormula, RichFormula};
+use crate::formula::function::builtin::{EQUALITY, FALSE_F, IF_THEN_ELSE, TRUE_F, BUILT_IN_FUNCTIONS};
 use crate::formula::function::inner::term_algebra::TermAlgebra;
 use crate::formula::function::inner::term_algebra::connective::{BaseConnective, Connective};
 use crate::formula::function::inner::term_algebra::quantifier::{InnerQuantifier, Quantifier};
 use crate::formula::function::traits::FixedSignature;
 use crate::formula::function::{Function, InnerFunction};
-use crate::formula::manipulation::FrozenOVSubstF;
+use crate::formula::manipulation::{FrozenOVSubstF, FrozenSubstF};
 use crate::formula::sort::builtins::{BOOL, CONDITION, MESSAGE};
 use crate::formula::sort::{FOSort, Sort};
 use crate::formula::utils::Applicable;
-use crate::formula::variable::{Variable, from_usize, sorts_to_variables};
+use crate::formula::variable::{Variable, from_usize, sorts_to_variables, uvar};
 use crate::problem::problem::Problem;
 use crate::{mexists, mforall};
 
@@ -233,6 +234,305 @@ pub fn generate<'bump>(
             }
             _ => continue,
         }
+    }
+
+    // Experimental "pairwise find-such-that FA" axiom (see [pairwise_find_fa]).
+    if env.pairwise_find_fa() {
+        pairwise_find_fa(assertions, declarations, env, pbl);
+    }
+}
+
+/// Emit the experimental pairwise find-such-that "FA" axioms (trusted).
+///
+/// For every two finds `f1`, `f2` of the problem whose variable signatures
+/// match up to alpha-renaming (same arity and sorts, in the same order, for
+/// both the free *and* the bound variables), assert a **skolem-free** pairing
+/// axiom in the spirit of Squirrel's `fa` (see `src/core/traceTactics.ml`,
+/// the `Term.Find` vs `Term.Find` case): the finds' bound variables are
+/// `∀`-quantified, aligned positionally onto one fresh tuple `B` (e.g. `l`
+/// becomes `k`), and the **unused** indices — those not occurring in `f1`'s
+/// condition nor its then-branch (detected syntactically, *after* macro
+/// expansion, so a dummy like the `j` in `mk!(i,j)=key(i)` is invisible) —
+/// are handled by `∃`-absorption in the forward direction:
+///
+/// ```text
+///   ∀F B.
+///      ( c1(F,B) ⟹ ∃B_unused. c2(F,B) )        -- forward (unused indices may differ)
+///    ∧ ( c2(F,B) ⟹ c1(F,B) )                   -- backward
+///    ∧ ( c1(F,B) ∧ c2(F,B) ⟹ then1(F,B) = then2(F,B) )
+///    ∧ ( else1 = else2 )                       -- Squirrel's 4th subgoal (blind)
+///      → eval(f1(F)) = eval(f2(F))
+/// ```
+///
+/// `F` is a fresh tuple of variables aligned positionally between the two
+/// finds. NB: this is a **strengthening** of the raw `find` encoding,
+/// gated behind `--pairwise-find-fa`.
+///
+/// **Fresh-variable assumption (soundness):** the fresh `F`/`B`/`b_unused`
+/// tuples are allocated starting above [`Problem::max_var`], which only counts
+/// ids visible in top-level term usage; ids hidden inside quantifier-function
+/// bodies (e.g. the `bound_variables` of `ta$forall$N`) are *not* counted. For
+/// every protocol tested so far those hidden ids stay below `max_var`, so the
+/// fresh ids cannot collide with them, but this is an implicit assumption — new
+/// encodings must keep all surviving ids `≤ pbl.max_var()` (or allocate fresh
+/// ids that are provably disjoint).
+fn pairwise_find_fa<'bump>(
+    assertions: &mut Vec<Axiom<'bump>>,
+    _declarations: &mut Vec<Declaration<'bump>>,
+    _env: &Environement<'bump>,
+    pbl: &Problem<'bump>,
+) {
+    let finds: Vec<(&Function<'bump>, &Quantifier<'bump>)> = pbl
+        .functions()
+        .iter()
+        .filter_map(|f| match f.as_inner() {
+            InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
+                if q.inner().is_find_such_that() =>
+            {
+                Some((f, q))
+            }
+            _ => None,
+        })
+        .collect();
+
+    // "same arity and sorts, in the same order" — both free *and* bound
+    // variables must align so that one shared tuple of binders makes sense.
+    let compatible = |a: &[Variable<'bump>], b: &[Variable<'bump>]| {
+        a.len() == b.len() && a.iter().zip(b.iter()).all(|(x, y)| x.sort == y.sort)
+    };
+
+    for ((f1, q1), (f2, q2)) in finds.iter().tuple_combinations() {
+        if !compatible(&q1.free_variables, &q2.free_variables)
+            || !compatible(&q1.bound_variables, &q2.bound_variables)
+        {
+            continue;
+        }
+
+        let (condition1, l1, r1) = match q1.inner() {
+            InnerQuantifier::FindSuchThat {
+                condition,
+                success,
+                faillure,
+            } => (condition, success, faillure),
+            _ => unreachable!(),
+        };
+        let (condition2, l2, r2) = match q2.inner() {
+            InnerQuantifier::FindSuchThat {
+                condition,
+                success,
+                faillure,
+            } => (condition, success, faillure),
+            _ => unreachable!(),
+        };
+
+        // fresh aligned free tuple `F` and a shared aligned bound tuple `B`
+        // (both finds' bound variables are aliased positionally onto it).
+        let mut next = pbl.max_var();
+        let mut fresh = |sort| {
+            next = next + from_usize(1);
+            Variable::new(next, sort)
+        };
+        let fv: Vec<Variable<'bump>> = q1.free_variables.iter().map(|v| fresh(v.sort)).collect();
+        let bv: Vec<Variable<'bump>> = q1.bound_variables.iter().map(|v| fresh(v.sort)).collect();
+
+        // "used" / "unused" split of each find's bound variables, by
+        // syntactic occurrence in its condition and then-branch (Squirrel's
+        // `occ_vars = get_vars c @ get_vars t`). Dummies that macro expansion
+        // already rewrote away (e.g. `mk!(i,j)=key(i)`) count as unused and
+        // are ∃-absorbed in the direction where they are the antecedent.
+        let unused_of =
+            |q: &Quantifier<'bump>, cond: &ARichFormula<'bump>, then_: &ARichFormula<'bump>| {
+                let used: HashSet<uvar> = UsedVariableIterator::with([cond, then_])
+                    .map(|v| v.id)
+                    .collect();
+                bv.iter()
+                    .enumerate()
+                    .filter(|(i, _)| !used.contains(&q.bound_variables[*i].id))
+                    .map(|(_, v)| *v)
+                    .collect::<Vec<_>>()
+            };
+        let b_unused1 = unused_of(q1, condition1, l1);
+        let b_unused2 = unused_of(q2, condition2, l2);
+
+        // substitute free → `F` and bound → `B`, for each find.
+        let subst_for = |q: &Quantifier<'bump>| {
+            FrozenOVSubstF::from_iter(
+                q.free_variables
+                    .iter()
+                    .map(|v| v.id)
+                    .zip(fv.iter().map(|v| v.into_formula().into()))
+                    .chain(
+                        q.bound_variables
+                            .iter()
+                            .map(|v| v.id)
+                            .zip(bv.iter().map(|v| v.into_formula().into())),
+                    )
+                    .map_into(),
+            )
+        };
+        let sub1 = subst_for(q1);
+        let sub2 = subst_for(q2);
+
+        let c1 = eval_condition(pbl, condition1.apply_substitution2(&sub1));
+        let c2 = eval_condition(pbl, condition2.apply_substitution2(&sub2));
+        let a1 = pbl.evaluator().eval(l1.apply_substitution2(&sub1));
+        let a2 = pbl.evaluator().eval(l2.apply_substitution2(&sub2));
+        let b1 = pbl.evaluator().eval(r1.apply_substitution2(&sub1));
+        let b2 = pbl.evaluator().eval(r2.apply_substitution2(&sub2));
+
+        let all_vars: Vec<Variable<'bump>> = fv.iter().chain(bv.iter()).copied().collect();
+
+        // forward: c1 ⟹ ∃B_unused1. c2    (find1's unused indices may differ)
+        let fwd_clause = c1.clone()
+            >> (if b_unused1.is_empty() {
+                c2.clone()
+            } else {
+                mexists!(b_unused1, { c2.clone() })
+            });
+        // backward: c2 ⟹ ∃B_unused2. c1    (find2's unused indices may differ)
+        let bwd_clause = c2.clone()
+            >> (if b_unused2.is_empty() {
+                c1.clone()
+            } else {
+                mexists!(b_unused2, { c1.clone() })
+            });
+        // then: c1 ∧ c2 ⟹ then1 = then2
+        let then_clause = (c1.clone() & c2.clone()) >> meq(a1.clone(), a2.clone());
+        // else: Squirrel's 4th subgoal — blind `else1 = else2`
+        let else_clause = meq(b1, b2);
+
+        let hypotheses = formula::ands([fwd_clause, bwd_clause, then_clause, else_clause]);
+
+        let conclusion = meq(
+            pbl.evaluator().eval(f1.apply(fv.iter().map(|v| v.into_formula()))),
+            pbl.evaluator().eval(f2.apply(fv.iter().map(|v| v.into_formula()))),
+        );
+
+        // `all_vars` is moved into the outer binder.
+        assertions.push(Axiom::base(mforall!(all_vars, { hypotheses >> conclusion })));
+    }
+}
+
+/// Evaluate a find's condition and fully push `evaluate_cond` down through it
+/// ([`push_down_condition`]), yielding a plain Boolean formula with no `ta$*`
+/// combinators.
+///
+/// The emitted lemmas (user `lemma` statements) already go through
+/// `propagate_evaluate` in `Problem::generate`, so keeping the pairwise-fa
+/// clauses shaped the same way makes the lemma consequents *syntactically
+/// isomorphic* to the fa-axiom hypothesis clauses — the bridge the solver's
+/// E-matching can then see directly (instead of having to unfold the opaque
+/// `ta$and`/`ta$or`/`ta$=` trees hidden under a single `evaluate_cond`).
+fn eval_condition<'bump>(
+    pbl: &Problem<'bump>,
+    formula: impl Into<ARichFormula<'bump>>,
+) -> ARichFormula<'bump> {
+    let evaluated = pbl.evaluator().eval(formula);
+    push_down_condition(&evaluated, pbl)
+}
+
+/// Push `evaluate_cond` down through a find-condition tree, turning the opaque
+/// `ta$*` combinator soup (`ta$and`, `ta$or`, `ta$not`, `ta$implies`, `ta$=`,
+/// `ta$true`/`ta$false`) into plain Boolean formulas, and expanding
+/// `exec_pred!`-style parameterized `∀ Step`-conditions (term-algebra `Forall`
+/// functions such as `ta$forall$2`/`3`/`4`) into literal `forall`s. The atomic
+/// `s_lt` / `s_happens` leaves are kept wrapped (`evaluate_cond (s_lt …)` /
+/// `evaluate_cond (s_happens …)`), and anything not structurally handled is
+/// left untouched — the exact shape the emitted lemmas have.
+///
+/// NB: `crate::problem::general_assertions::assertion_preprocessor::propagate_evaluate`
+/// already does most of this, but its quantifier branch assumes the term-
+/// algebra quantifier's *bound* variables line up with the function's
+/// application arguments, which is not the case for the `exec_pred!`-style
+/// `ta$forall$N` (their `∀`-indices live in `bound_variables`, the `Step`
+/// parameter in `free_variables`), so it panics — hence this self-contained
+/// version used only for the pairwise-fa clauses.
+///
+/// **Strength note:** the emitted `ta$forall$2/3/4` folds (and `ta$not`) are
+/// one-way implications (`evaluate_cond(ta$forall$N X) ⇒ ∀…`), unlike the
+/// other connectives whose folds are equalities. Replacing
+/// `evaluate_cond(ta$forall$N X)` with the literal `forall` therefore
+/// *weakens* `c1`/`c2` in arbitrary SMT models. In the honest model the
+/// equivalence `evaluate_cond(ta$forall$N X) ↔ ∀…` holds (the fold RHS is the
+/// intended reading) and matches how the query/lemmas already render the same
+/// `exec_pred!` block, so it restores — not corrupts — the honest meaning; the
+/// widening happens only in non-honest models, consistent with this being a
+/// documented trusted strengthening.
+fn push_down_condition<'bump>(
+    f: &ARichFormula<'bump>,
+    pbl: &Problem<'bump>,
+) -> ARichFormula<'bump> {
+    // `f` must be `(evaluate_cond <Condition term>)`, as produced by
+    // `pbl.evaluator().eval` on a Condition. Anything else is left as-is.
+    let term = match f.as_inner() {
+        RichFormula::Fun(fun, args)
+            if matches!(fun.as_inner(), InnerFunction::Evaluate(e) if e.name() == "evaluate_cond") =>
+        {
+            args[0].shallow_copy()
+        }
+        _ => return f.shallow_copy(),
+    };
+    match term.as_inner() {
+        RichFormula::Var(_) | RichFormula::Quantifier(_, _) => f.shallow_copy(),
+        RichFormula::Fun(tfun, targs) => match tfun.as_inner() {
+            InnerFunction::TermAlgebra(TermAlgebra::Condition(c)) => match c {
+                Connective::BaseConnective(BaseConnective::And) => {
+                    formula::ands(targs.iter().map(|a| {
+                        push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)
+                    }))
+                }
+                Connective::BaseConnective(BaseConnective::Or) => {
+                    formula::ors(targs.iter().map(|a| {
+                        push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)
+                    }))
+                }
+                Connective::BaseConnective(BaseConnective::Not) => {
+                    !push_down_condition(&pbl.evaluator().eval(targs[0].clone()), pbl)
+                }
+                Connective::BaseConnective(BaseConnective::Implies) => {
+                    let a = push_down_condition(&pbl.evaluator().eval(targs[0].clone()), pbl);
+                    let b = push_down_condition(&pbl.evaluator().eval(targs[1].clone()), pbl);
+                    a >> b
+                }
+                Connective::BaseConnective(BaseConnective::True) => {
+                    RichFormula::Fun(*TRUE_F, Vec::<ARichFormula<'bump>>::new().into()).into()
+                }
+                Connective::BaseConnective(BaseConnective::False) => {
+                    RichFormula::Fun(*FALSE_F, Vec::<ARichFormula<'bump>>::new().into()).into()
+                }
+                Connective::BaseConnective(BaseConnective::Iff) => f.shallow_copy(),
+                Connective::Equality(_) => meq(
+                    pbl.evaluator().eval(targs[0].clone()),
+                    pbl.evaluator().eval(targs[1].clone()),
+                ),
+            },
+            InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q)) => match &q.inner {
+                InnerQuantifier::Forall { content } | InnerQuantifier::Exists { content } => {
+                    // Expand a parameterized `∀ Step`-condition: the function's
+                    // application arguments bind the quantifier's *free*
+                    // variables, while the quantifier's own variables stay bound.
+                    if q.free_variables.len() != targs.len() {
+                        return f.shallow_copy(); // arity mismatch — keep it opaque
+                    }
+                    let subst = FrozenSubstF::new_from(
+                        q.free_variables.iter().map(|v| v.id).collect_vec(),
+                        targs,
+                    );
+                    let pushed = push_down_condition(
+                        &pbl.evaluator().eval(content.apply_substitution2(&subst)),
+                        pbl,
+                    );
+                    if matches!(&q.inner, InnerQuantifier::Forall { .. }) {
+                        mforall!(q.bound_variables.iter().cloned(), { pushed })
+                    } else {
+                        mexists!(q.bound_variables.iter().cloned(), { pushed })
+                    }
+                }
+                _ => f.shallow_copy(),
+            },
+            // `s_lt` / `s_happens` / any other leaf: keep `evaluate_cond`-wrapped.
+            _ => f.shallow_copy(),
+        },
     }
 }
 
