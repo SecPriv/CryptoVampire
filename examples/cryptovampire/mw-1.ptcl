@@ -98,8 +98,28 @@ let conclusion!(j:index) =
 let premise!(j:index) = 
     /* cond(reader(i,j)) */
     exists (i:index, k:index) { condition_fst!(i, j, k) }
-lemma forall (j:index) {( happens(reader2(j)) => (premise!(j) => conclusion!(j)) )}
-lemma forall (j:index) {( happens(reader2(j)) => (conclusion!(j) => premise!(j)) )}
-query forall (j:index) {true}
+
+query forall (j:index) {(
+    happens(reader2(j))
+        => (premise!(j) <=> conclusion!(j)) 
+)}
+
 assert-crypto euf-cma hash verify;
 assert-crypto nonce;
+
+/* lemma forall (i:index, j:index, k:index) {(
+    (
+        (input(tag(i, j)) == nr(k))
+        && lt(tag(i, j), reader2(k))
+    ) =>
+        lt(reader1(k), tag(i, j))
+)}
+
+lemma forall (i:index, j:index, k:index) {(
+    condition_fst!(i, j, k)
+        => (
+            m_xor(
+                mid!(i,k), 
+                hash(tpl(tpl(nr(j),sel1of2(input(reader2(j)))), tag1), mkey!(i, k))) 
+              == sel2of2(input(reader2(j))))
+)} */
