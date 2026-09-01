@@ -94,36 +94,13 @@ let fdst2!(j:index) =
         && s_lt(Tag(i,k), Reader(j))
         && exec_pred!(Reader(j))) }
         then { enc(
-            tpl(tagR, tpl(nr(j), nt(i,k))),
+            tpl(tagR, tpl(nt(i,k), nr(j))),
             /*tpl(tagR,tpl(snd(snd(dec(input(Reader(k)), mk!(i,j)))), nr(k))),*/
             rr(j),
             mk!(i,k)
         ) }
         else { ko } 
 
-query
-  forall (i1:index, k1:index, j:index, i2:index, j2:index) {
-    let k:index = j in
-    ((
-      ((input(Reader(j)) == msg!(Tag(i1,k1)))
-        && s_lt(Tag(i1,k1), Reader(j))
-        && exec_pred!(Reader(j))) &&
-      m_cond!(i2, j2, k, input(Reader(k)))
-    ) =>
-    (
-      enc(
-                tpl(tagR,tpl(snd(snd(dec(input(Reader(k)), mk!(i2,j2)))), nr(k))),
-                rr(k),
-                mk!(i2,j2)
-            ) ==
-enc(
-            tpl(tagR, tpl(nr(j), nt(i1,k1))),
-            /*tpl(tagR,tpl(snd(snd(dec(input(Reader(k1)), mk!(i1,j)))), nr(k1))),*/
-            rr(j),
-            mk!(i1,k1)
-        )
-    ))
-  }
 
 let condition!(i:index, j:index, k:index) = m_cond!(i,j,k, input(Reader(k)))
 let premise!(k:index) = exists (i:index, j:index) { condition!(i,j,k) }
@@ -138,8 +115,8 @@ let conclusion!(k:index) = exists (i:index, j:index) {(
    This mirrors the scheme rewrite
      (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
      (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)  */
-/*query forall (j:index) {(
+query forall (j:index) {(
      msg!(Reader(j))
     ==
     fdst2!(j)
-)}*/
+)}

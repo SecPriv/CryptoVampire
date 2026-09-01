@@ -112,11 +112,10 @@ pub fn generate<'bump>(
         // restrict to built-in twins because user TA functions get a fresh
         // `eval$...` that is only declared in the symbolic realm (referencing
         // it here would be a dangling symbol in the evaluated realm).
-        let builtin_twins: Vec<Function<'bump>> = BUILT_IN_FUNCTIONS.iter().map(|f| *f).collect();
         assertions.extend(
             relevant_functions
                 .iter()
-                .filter(|(_, ibf)| builtin_twins.contains(&ibf.eval_fun()))
+                .filter(|(_, ibf)| BUILT_IN_FUNCTIONS.contains(&ibf.eval_fun()))
                 .map(|(f, ibf)| {
                     let ev = ibf.eval_fun();
                     let vars: Arc<[_]> = sorts_to_variables(0, ibf.args());
