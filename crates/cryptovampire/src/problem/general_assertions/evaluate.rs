@@ -8,7 +8,7 @@ use crate::environement::environement::Environement;
 use crate::formula::file_descriptior::axioms::{Axiom, Rewrite, RewriteKind};
 use crate::formula::file_descriptior::declare::Declaration;
 use crate::formula::formula::{self, meq};
-use crate::formula::function::builtin::{EQUALITY, IF_THEN_ELSE};
+use crate::formula::function::builtin::{EQUALITY, IF_THEN_ELSE, BUILT_IN_FUNCTIONS};
 use crate::formula::function::inner::term_algebra::TermAlgebra;
 use crate::formula::function::inner::term_algebra::connective::{BaseConnective, Connective};
 use crate::formula::function::inner::term_algebra::quantifier::{InnerQuantifier, Quantifier};
@@ -103,13 +103,46 @@ pub fn generate<'bump>(
                 })
                 .map(Axiom::base),
         );
+        // The symbolic realm does this for *all* [TermAlgebra::Function]s in
+        // the `else` branch below. In the evaluated realm we must do it for the
+        // TA functions whose evaluated twin is a built-in that is already
+        // declared (e.g. `s_happens`/`s_lt` -> `happens`/`lt`), otherwise
+        // `evaluate_cond (s_happens t)` / `evaluate_msg (s_foo m)` are left
+        // with no definition linking them to the evaluated function. We
+        // restrict to built-in twins because user TA functions get a fresh
+        // `eval$...` that is only declared in the symbolic realm (referencing
+        // it here would be a dangling symbol in the evaluated realm).
+        let builtin_twins: Vec<Function<'bump>> = BUILT_IN_FUNCTIONS.iter().map(|f| *f).collect();
+        assertions.extend(
+            relevant_functions
+                .iter()
+                .filter(|(_, ibf)| builtin_twins.contains(&ibf.eval_fun()))
+                .map(|(f, ibf)| {
+                    let ev = ibf.eval_fun();
+                    let vars: Arc<[_]> = sorts_to_variables(0, ibf.args());
+                    Axiom::base(mforall!(vars.iter().cloned(), {
+                        meq(
+                            pbl.evaluator()
+                                .eval(f.apply(vars.iter().map(|v| v.into_formula()))),
+                            ev.f(vars
+                                .iter()
+                                .map(|v| pbl.evaluator().eval(v.into_aformula()))),
+                        )
+                    }))
+                }),
+        );
         // return;
     } else {
         if !env.no_bitstring_functions() {
+            // don't redeclare eval twins that are already first-class builtins
+            // in the problem (e.g. `happens`/`lt` are used as `eval_fun` of
+            // `s_happens`/`s_lt` but are also declared by the main declare
+            // loop); declaring them twice makes the solvers reject the file.
             declarations.extend(
                 relevant_functions
                     .iter()
                     .map(|(_, b)| b.eval_fun())
+                    .filter(|f| !pbl.functions().contains(f))
                     .map(Declaration::FreeFunction),
             );
 
