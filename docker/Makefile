@@ -18,7 +18,7 @@
 REGISTRY   ?=
 IMAGE      := cryptovampire2-artifact
 SHELL_IMAGE:= cryptovampire2-artifact-shell
-TAG        ?= dev
+TAG        ?= latest
 
 # Host directory that receives the results (results.csv, solver-test-results/).
 RESULTS_DIR ?= $(CURDIR)/results

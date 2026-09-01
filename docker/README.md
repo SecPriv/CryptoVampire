@@ -27,12 +27,20 @@ Either pull it (once a registry is set, see below):
 make -C docker pull REGISTRY=ghcr.io/<org>/<repo>
 ```
 
-or load a provided tarball directly:
+or if the images were built on your machine / provided as tarballs:
 
 ```sh
-sudo docker load < docker-image-cryptovampire2-artifact.tar.gz
-sudo docker load < docker-image-cryptovampire2-artifact-shell.tar.gz
+# nix build gives you a tarball (./result is a symlink to an image tar.gz)
+nix build .#docker
+sudo docker load < result                    # -> Loaded image: cryptovampire2-artifact:latest
+
+nix build .#docker-shell
+sudo docker load < result                    # -> cryptovampire2-artifact-shell:latest
 ```
+
+Note: `result` is not an image name to `docker run`; it is a Docker **archive**
+that must be `docker load`ed first, after which you `docker run` the loaded
+name (e.g. `cryptovampire2-artifact:latest`).
 
 ### 2. Run the full example suite
 
