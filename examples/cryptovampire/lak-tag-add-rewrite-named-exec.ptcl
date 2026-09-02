@@ -1,0 +1,171 @@
+/*
+Faithful base-cryptovampire rendering of examples/cryptovampire2/lak-tag.scm's
+main add-rewrite ("lemma", lines 102-105):
+
+    (add-rewrite pbl (rw.new "lemma" (list t j p)
+      (m_ite (macro_exec t p) (mk-fdst1 (macro_input t p) j p) mempty)
+      (m_ite (macro_exec t p) (mk-fdst2 t j p) mempty)))
+
+for the two-index protocol (p2): mk!(i,k) = key(i,k). Protocol modeled after
+experimental/trace/lak-tag-1.ptcl (try-find style), with the reader's nonce
+step r(i) = reader1(i).
+
+RENDER NOTES (deviations now reconciled with lak-tag.scm):
+  (1) the scm originally quantified the TIME t and the reader index j
+      independently (no link); semantically t must be the reader's own step
+      reader2(j). The scm now pins t = r2(j) (d2), and so does this file;
+  (2) the tag2 response hashes <<nr(j), sel1of2 in>, tag2> following the scm.
+      NOTE: Squirrel (lak-tags.sp) and the older base model
+      (crates/cryptovampire2/tests/old/lak-tag/lak-tag-1.ptcl) instead hash
+      <<sel2, nr>, tag2>. Both are self-consistent for this lemma (both finds
+      use the same form); the tuple flip is irrelevant as long as consistent;
+  (3) fdst2!'s search carries the honest-transcript conjuncts
+      input(tag(i,k)) == msg!(reader1(j)) and lt(reader1(j), tag(i,k))
+      (Squirrel wa_R1_R2 RHS: R(k) < T(i,j) && input@T(i,j) = output@R(k));
+      the scm now includes them too (d3).
+*/
+type index;
+
+fun tpl(Message, Message):Message
+
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+
+fun ok:Message
+fun ko:Message
+fun tag1:Message
+fun tag2:Message
+
+/* the Names */
+fun nt(index, index): Name
+fun nr(index): Name
+
+/* two-index key (protocol p2) */
+fun key(index, index):Name
+let mkey!(i:index, k:index) = key(i, k)
+
+/* mk-fdst1's search condition, in verify-form (euf-cma), scm writes
+   eq (sel2of2 in) (mhash (tuple (tuple (nr j) (sel1of2 in)) tag1) (mk i k)). */
+let m_condition_fst!(i:index, j:index, k:index, m_in: Message) =
+    verify(
+        sel2of2(m_in),
+        tpl(tpl(nr(j), sel1of2(m_in)), tag1),
+        mkey!(i, k))
+
+step reader1(i:index)
+    { true }
+    { nr(i) }
+
+/* mk-fdst1: the real reader, applied at its own index j (no stray index). */
+step reader2(j:index)
+    { true }
+    {
+        try find (i:index, k:index)
+            such that { m_condition_fst!(i, j, k, input(reader2(j))) }
+            then { hash(
+                tpl(tpl(nr(j), sel1of2(input(reader2(j)))), tag2),
+                mkey!(i, k)) }
+            else { ko }
+    }
+
+step tag(i:index, k:index)
+    { true }
+    { tpl(
+        nt(i,k),
+        hash(tpl(tpl(input(tag(i,k)), nt(i,k)), tag1), mkey!(i, k))
+    )}
+
+assert
+    forall (m1:Message, m2:Message) {
+        (
+            (m1 == sel1of2(tpl(m1,m2)))
+            && (m2 == sel2of2(tpl(m1,m2)))
+        )
+    }
+assert
+    forall (m1:Message, m2:Message, m3:Message, m4:Message) {
+        (
+            (tpl(m1,m2) == tpl(m3, m4))
+                => (
+                    (m1 == m3)
+                    && (m2 == m4)
+                )
+        )
+    }
+
+assert
+    forall (s:Message, m:Message, k:Message) {
+        (verify(s, m, k) <=> (s == hash(m, k)))
+    }
+
+assert (ko != ok)
+assert (tag1 != tag2)
+
+order forall (j:index)
+    reader1(j) < reader2(j)
+
+/* base cryptovampire doesn't natively support `exec` in protocol/query definition,
+   hence we redefine it here (see the feldhofer/ddh examples). */
+fun epred(Step):Bool
+
+assert forall (t:Step) {(
+    epred(t)
+    <=>
+    (
+        s_happens(t) &&
+        forall (i:index, k:index) {(s_lt(tag(i,k), t) => cond!(tag(i,k)))} &&
+        forall (j:index) {(s_lt(reader1(j), t) => cond!(reader1(j)))} &&
+        forall (j:index) {(s_lt(reader2(j), t) => cond!(reader2(j)))}
+    )
+)}
+
+/* mk-fdst2: the idealized/honest find. Search condition = the honest
+   transcript (sel1/sel2 match + exec + orderings + input(tag)==msg(r1)). */
+let fdst2!(j:index) =
+    try find (i:index, k:index)
+        such that { (
+        (input(tag(i,k)) == msg!(reader1(j)))
+        && (sel1of2(input(reader2(j))) == sel1of2(msg!(tag(i,k))))
+        && (sel2of2(input(reader2(j))) == sel2of2(msg!(tag(i,k))))
+        && epred(reader2(j))
+        && s_lt(reader1(j), tag(i,k))
+        && s_lt(tag(i,k), reader2(j))
+        ) }
+        then { hash(
+            tpl(tpl(nr(j), sel1of2(input(reader2(j)))), tag2),
+            mkey!(i, k)) }
+        else { ko }
+
+/* Guarded bridge: at an executing reader2(j), the reader's decrypt-check
+   (mk-fdst1's condition) is equivalent to the honest transcript (fdst2's
+   condition), spelled identically (s_lt + msg!) so it discharges the
+   pairwise-fa premise directly. */
+lemma forall (j:index, i:index, k:index) {(
+    epred(reader2(j))
+    =>
+    (
+        m_condition_fst!(i, j, k, input(reader2(j)))
+        <=>
+        (
+            (input(tag(i,k)) == msg!(reader1(j)))
+            && (sel1of2(input(reader2(j))) == sel1of2(msg!(tag(i,k))))
+            && (sel2of2(input(reader2(j))) == sel2of2(msg!(tag(i,k))))
+            && epred(reader2(j))
+            && s_lt(reader1(j), tag(i,k))
+            && s_lt(tag(i,k), reader2(j))
+        )
+    )
+)}
+
+/* The add-rewrite: at an executing reader2(j), the reader's output (mk-fdst1)
+   equals the idealized output (mk-fdst2). */
+query forall (j:index) {(
+    if (epred(reader2(j)) && cond!(reader2(j))) { msg!(reader2(j)) } else {empty}
+    ==
+    if (epred(reader2(j)) && cond!(reader2(j))) { fdst2!(j) } else {empty}
+)}
+
+assert-crypto euf-cma hash verify;
+assert-crypto nonce;
