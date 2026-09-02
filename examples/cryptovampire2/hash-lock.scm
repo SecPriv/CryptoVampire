@@ -17,6 +17,7 @@
 
 (define p1 (declare-protocol pbl))
 (define p2 (declare-protocol pbl))
+(define ptcls (list p1 p2))
 
 (define prf (declare-cryptography pbl))
 
@@ -30,81 +31,51 @@
 
 (define-alias _mk pbl (Index Index Protocol) Nonce
   [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))
-    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
+  ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
 
 (define mk (wrap-nonce _mk))
 
+(define (verify s m k) (eq s (mhash m k)));; because I made too many mistakes
 
 (define tag
-  (declare-step pbl "tag" (list Index Index)
-    (step p1
-      (lambda _ mtrue)
-      (lambda (in i j . _)
-        (tuple (n i j) (mhash (tuple in (n i j)) (mk i j p1))))
-      empty-assignements)
-    (step p2
-      (lambda _ mtrue)
-      (lambda (in i j . _)
-        (tuple (n i j) (mhash (tuple in (n i j)) (mk i j p2))))
-      empty-assignements)))
+  (declare-same-step pbl "tag" ptcls (list Index Index)
+    (lambda _ mtrue)
+    (lambda (p in i j . _)
+      (tuple (n i j) (mhash (tuple in (n i j)) (mk i j p))))
+    empty-assignements))
 
 (define reader1
   (declare-step pbl "reader1" (list Index)
     (step p1 (lambda _ mtrue) (lambda (in i . _) (nr i)) empty-assignements)
     (step p2 (lambda _ mtrue) (lambda (in i . _) (nr i)) empty-assignements)))
 
-(define rs
-  (declare-step pbl "reader_success" (list Index Index)
-    (step p1
-      (lambda (in i j . _)
-        (eq (tuple (nr i) (sel2of2 in)) (mhash (sel1of2 in) (mk i j p1))))
-      (lambda _ ok)
-      empty-assignements)
-    (step p2
-      (lambda (in i j . _)
-        (eq (tuple (nr i) (sel2of2 in)) (mhash (sel1of2 in) (mk i j p2))))
-      (lambda _ ok)
-      empty-assignements)))
-
-(define rf
-  (declare-step pbl "reader_fail" (list Index)
-    (step p1
-      (lambda (in i . _)
-        (mnot (exists ((j Index))
-            (eq (tuple (nr i) (sel2of2 in))
-              (mhash (sel1of2 in) (mk i j p1))))))
-      (lambda _ ko)
-      empty-assignements)
-    (step p2
-      (lambda (in i . _)
-        (mnot (exists ((j Index))
-            (eq (tuple (nr i) (sel2of2 in))
-              (mhash (sel1of2 in) (mk i j p2))))))
-      (lambda _ ko)
-      empty-assignements)))
+(define reader2
+  (declare-same-step pbl "reader2" ptcls (list Index)
+    (lambda _ mtrue)
+    (lambda (p in j . _)
+      (m_ite
+        (exists ((i Index) (k Index))
+          (verify (sel2of2 in) (tuple (nr j) (sel1of2 in)) (mk i k p)))
+        ok ko))
+    empty-assignements))
 
 (initialize-as-prf prf mhash)
 
 (bind
-  ((i Index) (j Index)
+  ((j Index)
     (t Time)
     (p Protocol))
-  (let [ (in (macro_input t p)) (int (lambda (j) (macro_msg (tag i j) p))) ]
-    (add-rewrite pbl (rw.new "lemma-2" (list i t j p)
-        (eq (tuple (nr i) (sel2of2 in)) (mhash (sel1of2 in) (mk i j p)))
-        (exists ((j Index))
+  (let [ (in (macro_input t p)) ]
+    (add-rewrite pbl (rw.new "lemma-2" (list t j p)
+        (exists ((i Index) (k Index))
+          (verify (sel2of2 in) (tuple (nr j) (sel1of2 in)) (mk i k p)))
+        (exists ((i Index) (k Index))
           (cand
-            (eq (sel1of2 in) (sel1of2 (int j)))
-            (eq (sel2of2 in) (sel2of2 (int j)))
-            (eq (macro_input (tag i j) p) (macro_msg (reader1 i) p))
-            (lt (reader1 i) (tag i j))
-            (lt (tag i j) t))))))); <- very important
+            (eq in (macro_msg (tag i k) p))
+            (eq (macro_input (tag i k) p) (macro_msg (reader1 j) p))
+            (lt (reader1 j) (tag i k))
+            (lt (tag i k) t))))))); <- very important
 
-(add-constrain pbl (i j) (lt (reader1 i) (rs i j)))
-(add-constrain pbl (i) (lt (reader1 i) (rf i)))
-(add-constrain pbl (i j) (<> (rs i j) (rf i)))
+(add-constrain pbl (i) (lt (reader1 i) (reader2 i)))
 
-;; configuration
-; (config.set_trace pbl #t)
-
-(run-and-save "hash-lock" pbl p1 p2 "300ms")
+(run-and-save "hash-lock" pbl p1 p2 "150ms")
