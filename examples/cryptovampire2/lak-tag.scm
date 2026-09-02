@@ -92,17 +92,19 @@
   (let [ (in (macro_input t p)) ]
     (findst ((i Index) (k Index))
       (cand
+        (eq (macro_input (tag i k) p) (macro_msg (r j) p)) ; input(tag)==msg(r): honest transcript (d3)
         (eq (sel1of2 in) (sel1of2 (macro_msg (tag i k) p)))
         (eq (sel2of2 in) (sel2of2 (macro_msg (tag i k) p)))
         (macro_exec t p)
+        (lt (r j) (tag i k)) ; (d3): r < tag
         (lt (tag i k) t)) ; <- very important
       (mhash (tuple (tuple (nr j) (sel1of2 in)) tag2) (mk i k p))
       ko)))
 
-(bind ((j Index) (t Time) (p Protocol))
-  (add-rewrite pbl (rw.new "lemma" (list t j p)
-      (m_ite (macro_exec t p) (mk-fdst1 (macro_input t p) j p) mempty)
-      (m_ite (macro_exec t p) (mk-fdst2 t j p) mempty))))
+(bind ((j Index) (p Protocol))
+  (add-rewrite pbl (rw.new "lemma" (list j p)
+      (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
+      (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty))))
 
 
 (add-smt-axiom pbl (mnot (eq tag1 tag2)))
