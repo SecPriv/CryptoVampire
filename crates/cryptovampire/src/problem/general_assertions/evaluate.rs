@@ -409,7 +409,7 @@ fn pairwise_find_fa<'bump>(
         // then: c1 ∧ c2 ⟹ then1 = then2
         let then_clause = (c1.clone() & c2.clone()) >> meq(a1.clone(), a2.clone());
         // else: Squirrel's 4th subgoal — blind `else1 = else2`
-        let else_clause = meq(b1, b2);
+        let else_clause = (mforall!(bv, { !c1.clone() & !c2.clone() })) >> meq(b1, b2);
 
         let hypotheses = formula::ands([fwd_clause, bwd_clause, then_clause, else_clause]);
 
