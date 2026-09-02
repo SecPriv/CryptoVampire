@@ -122,6 +122,7 @@
   (let [ (in (macro_input (r2 r) p)) ]
     (findst ((i Index) (t Index))
       (cand
+        (eq (macro_input (tag i t) p) (macro_msg (r1 r) p)) ; input(tag)==msg(r1): honest transcript (eq. hash-lock.scm lemma-2)
         (eq (sel1of2 in) (sel1of2 (macro_msg (tag i t) p)))
         (eq (sel2of2 in) (sel2of2 (macro_msg (tag i t) p)))
         (macro_exec (r2 r) p)
@@ -130,9 +131,9 @@
       (mxor (mid i t p) (mhash (tuple (tuple (nr r) (sel1of2 in)) tag2) (mk i t p)))
       ko)))
 
-(bind ((j Index) (r Index) (p Protocol))
-  (add-rewrite pbl (rw.new "lemma" (list j r p)
-      (m_ite (macro_exec (r2 r) p) (mk-fdst1 (macro_input (r2 r) p) j p) mempty)
+(bind ((r Index) (p Protocol))
+  (add-rewrite pbl (rw.new "lemma" (list r p)
+      (m_ite (macro_exec (r2 r) p) (mk-fdst1 (macro_input (r2 r) p) r p) mempty)
       (m_ite (macro_exec (r2 r) p) (mk-fdst2 r p) mempty))))
 
 

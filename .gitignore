@@ -12,6 +12,7 @@ crates/cryptovampire2 old
 **/.\#*
 
 tmp
+.pi-subagents
 
 **/profile.json.gz
 results*
