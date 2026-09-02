@@ -1,3 +1,4 @@
+/* Injective agreement */
 type index;
 fun tpl(Message, Message):Message
 
