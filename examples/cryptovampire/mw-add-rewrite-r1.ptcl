@@ -1,0 +1,13 @@
+/*
+mw.scm add-rewrites "lemma1" and "lemma2":
+    (nr i) == (macro_msg (r1 i) p1)   and   (nr i) == (macro_msg (r1 i) p2)
+The r1 step outputs the nonce nr(i); base cryptovampire proves this in 1 try.
+*/
+type index;
+fun nr(index):Name;
+
+step reader1(i:index) { true } { nr(i) }
+
+query forall (i:index) {( msg!(reader1(i)) == nr(i) )}
+
+assert-crypto nonce;
