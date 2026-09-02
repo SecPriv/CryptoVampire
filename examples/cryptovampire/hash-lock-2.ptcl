@@ -72,10 +72,9 @@ let premise!(j:index) =
     /* cond(reader(i,j)) */
     exists (i:index, k:index) { condition_fst!(i, j, k) }
 
-query forall (j:index) {(
-    happens(reader2(j))
-        => (conclusion!(j) <=> premise!(j)) 
-)}
+query forall (j:index) {
+    (conclusion!(j) <=> premise!(j)) 
+}
 
 assert-crypto euf-cma hash verify;
 assert-crypto nonce;

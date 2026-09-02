@@ -30,14 +30,22 @@ step reader2(j:index)
         if exists (i:index, k:index) { m_condition_fst!(i, j, k, input(reader2(j))) }
             { ok } else { ko }
     }
-let condition_fst!(i:index, j:index, k:index) = m_condition_fst!(i,j,k,input(reader2(j)))
 
-step tag(i:index, k:index)
+step reader_s(i:index, j:index) 
+    {verify(sel2of2(in), tpl(nr(i), sel1of2(in)),key(i))}
+    {ok}
+
+step reader_f(i:index)
+    {not(exists (j:index) {verify(sel2of2(in), tpl(nr(i), sel1of2(in)),key(i))})}
+    {ko}
+
+
+step tag(i:index, j:index)
     { true }
     { tpl(
-        nt(i,k),
+        nt(i,j),
         hash(
-            tpl(input(tag(i,k)),nt(i,k)),
+            tpl(input(tag(i,j)),nt(i,j)),
             key(i)
         )
     )}
@@ -74,19 +82,18 @@ let conclusion2!(i:index, j:index, k:index) = forall (j0:index) {(
         )
 )}
 
-let conclusion!(j:index) = 
-  exists (i:index, k:index) {(
-    lt(tag(i, k), reader2(j))
-    && lt(reader1(j), tag(i, k))
-    && (sel1of2(msg!(tag(i, k))) == sel1of2(input(reader2(j))))
-    && (sel2of2(msg!(tag(i, k))) == sel2of2(input(reader2(j))))
-    && (input(tag(i, k)) == msg!(reader1(j)))
-    && conclusion2!(i, j, k)
+let conclusion!(j:index, i:index) = 
+  exists (j:index) {(
+    lt(tag(i, j), reader2(i))
+    && lt(reader1(i), tag(i, j))
+    && (sel1of2(msg!(tag(i, j))) == sel1of2(input(reader2(i))))
+    && (sel2of2(msg!(tag(i, j))) == sel2of2(input(reader2(i))))
+    && (input(tag(i, j)) == msg!(reader1(i)))
 )}
 
-query forall (j:index) {(
+query forall (j:index, i:index) {(
     happens(reader2(j))
-        => (premise!(j) => conclusion!(j)) 
+        => (premise!(j) => conclusion!(j,i)) 
 )}
 
 assert-crypto euf-cma hash verify;

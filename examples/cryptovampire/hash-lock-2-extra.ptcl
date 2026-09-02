@@ -84,10 +84,9 @@ let conclusion!(j:index) =
     && conclusion2!(i, j, k)
 )}
 
-query forall (j:index) {(
-    happens(reader2(j))
-        => (premise!(j) => conclusion!(j)) 
-)}
+query forall (j:index) {
+     (premise!(j) == conclusion!(j)) 
+}
 
 assert-crypto euf-cma hash verify;
 assert-crypto nonce;
