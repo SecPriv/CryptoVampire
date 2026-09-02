@@ -1,15 +1,19 @@
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
-use itertools::Itertools;
-use logic_formula::iterators::UsedVariableIterator;
+use itertools::{Itertools, izip};
 use log::trace;
+use logic_formula::AsFormula;
+use logic_formula::iterators::UsedVariableIterator;
+use utils::econtinue_if;
 
 use crate::environement::environement::Environement;
 use crate::formula::file_descriptior::axioms::{Axiom, Rewrite, RewriteKind};
 use crate::formula::file_descriptior::declare::Declaration;
-use crate::formula::formula::{self, meq, ARichFormula, RichFormula};
-use crate::formula::function::builtin::{EQUALITY, FALSE_F, IF_THEN_ELSE, TRUE_F, BUILT_IN_FUNCTIONS};
+use crate::formula::formula::{self, ARichFormula, RichFormula, meq};
+use crate::formula::function::builtin::{
+    BUILT_IN_FUNCTIONS, EQUALITY, FALSE_F, IF_THEN_ELSE, TRUE_F,
+};
 use crate::formula::function::inner::term_algebra::TermAlgebra;
 use crate::formula::function::inner::term_algebra::connective::{BaseConnective, Connective};
 use crate::formula::function::inner::term_algebra::quantifier::{InnerQuantifier, Quantifier};
@@ -19,7 +23,7 @@ use crate::formula::manipulation::{FrozenOVSubstF, FrozenSubstF};
 use crate::formula::sort::builtins::{BOOL, CONDITION, MESSAGE};
 use crate::formula::sort::{FOSort, Sort};
 use crate::formula::utils::Applicable;
-use crate::formula::variable::{Variable, from_usize, sorts_to_variables, uvar};
+use crate::formula::variable::{IntoVariableIter, Variable, from_usize, sorts_to_variables, uvar};
 use crate::problem::problem::Problem;
 use crate::{mexists, mforall};
 
@@ -124,9 +128,7 @@ pub fn generate<'bump>(
                         meq(
                             pbl.evaluator()
                                 .eval(f.apply(vars.iter().map(|v| v.into_formula()))),
-                            ev.f(vars
-                                .iter()
-                                .map(|v| pbl.evaluator().eval(v.into_aformula()))),
+                            ev.f(vars.iter().map(|v| pbl.evaluator().eval(v.into_aformula()))),
                         )
                     }))
                 }),
@@ -298,38 +300,39 @@ fn pairwise_find_fa<'bump>(
     // "same arity and sorts, in the same order" — both free *and* bound
     // variables must align so that one shared tuple of binders makes sense.
     let compatible = |a: &[Variable<'bump>], b: &[Variable<'bump>]| {
-        a.len() == b.len() && a.iter().zip(b.iter()).all(|(x, y)| x.sort == y.sort)
+        let [asorts, bsorts] = [a, b].map(|x| x.iter().map(Variable::sort));
+        a.len() == b.len() && izip!(asorts, bsorts).all(|(x, y)| x == y)
     };
 
     for ((f1, q1), (f2, q2)) in finds.iter().tuple_combinations() {
-        if !compatible(&q1.free_variables, &q2.free_variables)
-            || !compatible(&q1.bound_variables, &q2.bound_variables)
-        {
-            continue;
-        }
+        econtinue_if!(
+            !compatible(&q1.free_variables, &q2.free_variables)
+                || !compatible(&q1.bound_variables, &q2.bound_variables)
+        );
 
-        let (condition1, l1, r1) = match q1.inner() {
-            InnerQuantifier::FindSuchThat {
-                condition,
-                success,
-                faillure,
-            } => (condition, success, faillure),
-            _ => unreachable!(),
+        let InnerQuantifier::FindSuchThat {
+            condition: condition1,
+            success: l1,
+            faillure: r1,
+        } = q1.inner()
+        else {
+            unreachable!()
         };
-        let (condition2, l2, r2) = match q2.inner() {
-            InnerQuantifier::FindSuchThat {
-                condition,
-                success,
-                faillure,
-            } => (condition, success, faillure),
-            _ => unreachable!(),
+
+        let InnerQuantifier::FindSuchThat {
+            condition: condition2,
+            success: l2,
+            faillure: r2,
+        } = q2.inner()
+        else {
+            unreachable!()
         };
 
         // fresh aligned free tuple `F` and a shared aligned bound tuple `B`
         // (both finds' bound variables are aliased positionally onto it).
         let mut next = pbl.max_var();
         let mut fresh = |sort| {
-            next = next + from_usize(1);
+            next += 1;
             Variable::new(next, sort)
         };
         let fv: Vec<Variable<'bump>> = q1.free_variables.iter().map(|v| fresh(v.sort)).collect();
@@ -342,12 +345,19 @@ fn pairwise_find_fa<'bump>(
         // are ∃-absorbed in the direction where they are the antecedent.
         let unused_of =
             |q: &Quantifier<'bump>, cond: &ARichFormula<'bump>, then_: &ARichFormula<'bump>| {
-                let used: HashSet<uvar> = UsedVariableIterator::with([cond, then_])
-                    .map(|v| v.id)
-                    .collect();
+                // I believe this is more precise as variable capture by a
+                // deeper quantifier but unused would still be considered as
+                // unused (as far as I understand)
+                let free_vars = [cond, then_]
+                    .map(|x| x.as_expander().free_vars_iter())
+                    .vars_id_iter()
+                    .collect::<HashSet<_>>();
+                // let used: HashSet<uvar> = UsedVariableIterator::with([cond, then_])
+                // .map(|v| v.id)
+                // .collect();
                 bv.iter()
                     .enumerate()
-                    .filter(|(i, _)| !used.contains(&q.bound_variables[*i].id))
+                    .filter(|(i, _)| !free_vars.contains(&q.bound_variables[*i].id))
                     .map(|(_, v)| *v)
                     .collect::<Vec<_>>()
             };
@@ -404,12 +414,16 @@ fn pairwise_find_fa<'bump>(
         let hypotheses = formula::ands([fwd_clause, bwd_clause, then_clause, else_clause]);
 
         let conclusion = meq(
-            pbl.evaluator().eval(f1.apply(fv.iter().map(|v| v.into_formula()))),
-            pbl.evaluator().eval(f2.apply(fv.iter().map(|v| v.into_formula()))),
+            pbl.evaluator()
+                .eval(f1.apply(fv.iter().map(|v| v.into_formula()))),
+            pbl.evaluator()
+                .eval(f2.apply(fv.iter().map(|v| v.into_formula()))),
         );
 
         // `all_vars` is moved into the outer binder.
-        assertions.push(Axiom::base(mforall!(all_vars, { hypotheses >> conclusion })));
+        assertions.push(Axiom::base(mforall!(all_vars, {
+            hypotheses >> conclusion
+        })));
     }
 }
 
@@ -465,9 +479,7 @@ fn push_down_condition<'bump>(
     // `f` must be `(evaluate_cond <Condition term>)`, as produced by
     // `pbl.evaluator().eval` on a Condition. Anything else is left as-is.
     let term = match f.as_inner() {
-        RichFormula::Fun(fun, args)
-            if matches!(fun.as_inner(), InnerFunction::Evaluate(e) if e.name() == "evaluate_cond") =>
-        {
+        RichFormula::Fun(fun, args) if matches!(fun.as_inner(), InnerFunction::Evaluate(e) if e.name() == "evaluate_cond") => {
             args[0].shallow_copy()
         }
         _ => return f.shallow_copy(),
@@ -476,16 +488,16 @@ fn push_down_condition<'bump>(
         RichFormula::Var(_) | RichFormula::Quantifier(_, _) => f.shallow_copy(),
         RichFormula::Fun(tfun, targs) => match tfun.as_inner() {
             InnerFunction::TermAlgebra(TermAlgebra::Condition(c)) => match c {
-                Connective::BaseConnective(BaseConnective::And) => {
-                    formula::ands(targs.iter().map(|a| {
-                        push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)
-                    }))
-                }
-                Connective::BaseConnective(BaseConnective::Or) => {
-                    formula::ors(targs.iter().map(|a| {
-                        push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)
-                    }))
-                }
+                Connective::BaseConnective(BaseConnective::And) => formula::ands(
+                    targs
+                        .iter()
+                        .map(|a| push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)),
+                ),
+                Connective::BaseConnective(BaseConnective::Or) => formula::ors(
+                    targs
+                        .iter()
+                        .map(|a| push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)),
+                ),
                 Connective::BaseConnective(BaseConnective::Not) => {
                     !push_down_condition(&pbl.evaluator().eval(targs[0].clone()), pbl)
                 }
