@@ -1,0 +1,199 @@
+/*
+SUPERSEDED EXPERIMENT — assert-bridge (trusted strengthening), NOT a sound proof.
+
+The first version of the mw add-rewrite model to "work": instead of proving
+the bridge between the reader's decrypt check (mk-fdst1 / condition_fst!) and
+the honest transcript (honest!), it just installed the bridge as two TRUSTED
+assert axioms:
+
+    assert forall (i,j,k) { honest!(i,j,k)         => condition_fst!(i,j,k) }
+    assert forall (i,j,k) { condition_fst!(i,j,k)  => honest!(i,j,k) }
+
+i.e. it assumed the very bridge the proof is supposed to derive. Useful to
+exercise the rest of the pipeline (the quaint query could close with cvc5 in
+<20s), but it is NOT a sound proof of the add-rewrite.
+
+The correct, sound proof lives in examples/cryptovampire/:
+    * mw-add-rewrite-plain.ptcl        (exec guard via the pred_exec! macro)
+    * mw-add-rewrite-named-exec.ptcl   (exec guard via a hand-written pred_exec)
+    * mw-add-rewrite-execpred.ptcl     (exec guard via the --exec-pred tool symbol)
+there the bridge is a LEMMA whose exec-guard makes it provable, run as
+    cryptovampire <file> --pairwise-find-fa auto -l --timeout 15
+(+ --exec-pred for the -execpred variant).
+
+Historical note: this file keeps the old fdst2 spelling with raw
+msg(reader1(r)) (an uninterpreted step-output symbol, later fixed to
+msg!(reader1(r))).
+*/
+/*
+Faithful base-cryptovampire rendering of examples/cryptovampire2/mw.scm's main
+add-rewrite ("lemma", mw.scm lines 133-136):
+
+    (add-rewrite pbl (rw.new "lemma" (list r p)
+      (m_ite (macro_exec (r2 r) p) (mk-fdst1 (macro_input (r2 r) p) r p) mempty)
+      (m_ite (macro_exec (r2 r) p) (mk-fdst2 r p) mempty)))
+
+for the two-index protocol (p2): mk!(i,t) = key(i,t),  mid!(i,t) = id(i,t).
+Protocol modeled after examples/cryptovampire/mw-2-ra.ptcl (canonical).
+
+The two mw.scm statement fixes found earlier are reflected:
+  (1) the LHS uses the reader's OWN index r (mk-fdst1 ... r p) -- mw.scm
+      originally had a stray free `j`; now fixed in mw.scm too;
+  (2) mk-fdst2's search carries the honest-transcript conjunct
+      input(tag(i,t)) == msg!(reader1(r)) -- this is Squirrel's
+      wa_R1_R2/wa_R1 `output@R(r) = input@T(i,t)`; without it the idealized
+      search cannot identify the honest tag.
+
+NOTE on the index-sensitive bits: within each find the SAME bound index is
+used in the condition and the then (so there is no inner k-vs-t mismatch);
+the add-rewrite asserts the two finds agree. Base cryptovampire can prove the
+weak existential bridge (conclusion! <=> premise!) but, as found, does NOT yet
+close the index-precise version this query states within budget.
+*/
+type index;
+
+fun tpl(Message, Message):Message
+
+fun sel1of2(Message):Message;
+fun sel2of2(Message):Message
+fun hash(Message, Message):Message
+fun verify(Message, Message, Message):Bool
+
+fun m_xor(Message, Message):Message
+
+fun ok:Message
+fun ko:Message
+fun tag1:Message
+fun tag2:Message
+
+/* the Names */
+fun nt(index, index): Name
+fun nr(index): Name
+
+/* two-index key and id (protocol p2) */
+fun key(index, index):Name
+let mkey!(i:index, k:index) = key(i, k)
+
+fun id(index, index):Message
+let mid!(i:index, k:index) = id(i, k)
+
+/* reader's decrypt-style search condition (mk-fdst1), in verify-form so that
+   the euf-cma axioms engage (scm writes mhash(...) == mxor(..) directly). */
+let m_condition_fst!(i:index, j:index, k:index, m_in: Message) =
+    verify(
+        m_xor(mid!(i, k), sel2of2(m_in)),
+        tpl(tpl(nr(j), sel1of2(m_in)), tag1),
+        mkey!(i, k))
+
+step reader1(i:index)
+    { true }
+    { nr(i) }
+
+/* mk-fdst1: the real reader, applied at its own index r (fix 1: no stray j). */
+step reader2(r:index)
+    { true }
+    {
+        try find (i:index, k:index)
+            such that { m_condition_fst!(i, r, k, input(reader2(r))) }
+            then { m_xor(
+                mid!(i,k),
+                hash(tpl(tpl(nr(r), sel1of2(input(reader2(r)))), tag2), mkey!(i, k))) }
+            else { ko }
+    }
+
+step tag(i:index, k:index)
+    { true }
+    { tpl(
+        nt(i,k),
+        m_xor(mid!(i,k), hash(tpl(tpl(input(tag(i,k)), nt(i,k)), tag1), mkey!(i, k)))
+    )}
+
+assert
+    forall (m1:Message, m2:Message) {
+        (
+            (m1 == sel1of2(tpl(m1,m2)))
+            && (m2 == sel2of2(tpl(m1,m2)))
+        )
+    }
+assert
+    forall (m1:Message, m2:Message, m3:Message, m4:Message) {
+        (
+            (tpl(m1,m2) == tpl(m3, m4))
+                => (
+                    (m1 == m3)
+                    && (m2 == m4)
+                )
+        )
+    }
+
+assert
+    forall (s:Message, m:Message, k:Message) {
+        (verify(s, m, k) <=> (s == hash(m, k)))
+    }
+
+assert (ko != ok)
+assert (tag1 != tag2)
+
+assert forall (m:Message, m':Message) {(
+    m_xor(m, m_xor(m, m')) == m'
+)}
+
+order forall (j:index)
+    reader1(j) < reader2(j)
+
+/* base cryptovampire doesn't natively support `exec` in protocol/query definition,
+   hence we redefine it here (see the feldhofer/ddh examples). */
+let pred_exec!(t:Step) = (
+    s_happens(t) &&
+    forall (i:index, k:index) {(s_lt(tag(i,k), t) => cond!(tag(i,k)))} &&
+    forall (j:index) {(s_lt(reader1(j), t) => cond!(reader1(j)))} &&
+    forall (j:index) {(s_lt(reader2(j), t) => cond!(reader2(j)))}
+)
+
+/* The honest transcript (mk-fdst2's search body), as a formula. */
+let honest!(i:index, j:index, k:index) = (
+    (input(tag(i,k)) == msg(reader1(j)))
+    && (sel1of2(msg!(tag(i,k))) == sel1of2(input(reader2(j))))
+    && (sel2of2(msg!(tag(i,k))) == sel2of2(input(reader2(j))))
+    && pred_exec!(reader2(j))
+    && s_lt(reader1(j), tag(i,k))
+    && s_lt(tag(i,k), reader2(j))
+)
+
+let condition_fst!(i:index, j:index, k:index) = m_condition_fst!(i,j,k,input(reader2(j)))
+
+/* Trusted index-precise w-authentication bridges (wa_R1_left/right style).
+   These make --pairwise-find-fa's fa-axiom premise (H<=>C at fixed (i,k))
+   dischargeable. CAVEAT: C=>H is only sound under exec/honesty + euf-cma;
+   it is a trusted strengthening in arbitrary models. */
+assert forall (i:index, j:index, k:index) {( honest!(i, j, k) => condition_fst!(i, j, k) )}
+assert forall (i:index, j:index, k:index) {( condition_fst!(i, j, k) => honest!(i, j, k) )}
+
+/* mk-fdst2: the idealized/honest find. Search condition = the honest
+   transcript: input(tag)==msg(r1) [fix 2], sel1/sel2 match with the received
+   message, exec of reader2(r), and the r1(r) < tag < r2(r) orderings. */
+let fdst2!(r:index) =
+    try find (i:index, t:index)
+        such that { (
+        (input(tag(i,t)) == msg(reader1(r)))
+        && (sel1of2(input(reader2(r))) == sel1of2(msg!(tag(i,t))))
+        && (sel2of2(input(reader2(r))) == sel2of2(msg!(tag(i,t))))
+        && pred_exec!(reader2(r))
+        && s_lt(reader1(r), tag(i,t))
+        && s_lt(tag(i,t), reader2(r))
+        ) }
+        then { m_xor(
+            mid!(i,t),
+            hash(tpl(tpl(nr(r), sel1of2(input(reader2(r)))), tag2), mkey!(i, t))) }
+        else { ko }
+
+/* The add-rewrite: at an executing reader2(r), the reader's output (mk-fdst1)
+   equals the idealized output (mk-fdst2). */
+query forall (r:index) {(
+    if (pred_exec!(reader2(r)) && cond!(reader2(r))) { msg!(reader2(r)) } else {empty}
+    ==
+    if (pred_exec!(reader2(r)) && cond!(reader2(r))) { fdst2!(r) } else {empty}
+)}
+
+assert-crypto euf-cma hash verify;
+assert-crypto nonce;
