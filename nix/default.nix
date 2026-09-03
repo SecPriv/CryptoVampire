@@ -6,5 +6,6 @@
     ./packages.nix
     ./rust-project.nix
     ./scheme-format.nix
+    ./docker.nix
   ];
 }

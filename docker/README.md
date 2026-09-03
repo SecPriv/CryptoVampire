@@ -1,0 +1,161 @@
+# CryptoVampire2 — Docker artifact for evaluation
+
+This directory contains everything a reviewer needs to run **cryptovampire2**
+on the artifact examples **without having nix installed**.  The prebuilt OCI
+images bundle:
+
+- the `cryptovampire2` release binary (built from the pinned source snapshot),
+- the SMT solvers used by the harness: **vampire-4**, **z3**, **cvc5**,
+- `python3`, `make`, `bash` and friends (to run the harness Makefile),
+- a git-exported snapshot of this repository (so the examples, the scheme
+  libraries and the harness are all self-contained).
+
+There is **no rust toolchain and no nix** inside the image: reviewers never
+rebuild cryptovampire2 from source and never run nix.
+
+## Reviewer quick start (docker only)
+
+Requirements: `docker` (or an OCI compatible runtime such as podman) and
+`make`.  A 64-bit Linux host/VM is expected; Apple-Silicon Macs work through
+Docker's x86 emulation (see "ARM note" below).
+
+### 1. Get the image
+
+Either pull it (once a registry is set, see below):
+
+```sh
+make -C docker pull REGISTRY=ghcr.io/<org>/<repo>
+```
+
+or if the images were built on your machine / provided as tarballs:
+
+```sh
+# nix build gives you a tarball (./result is a symlink to an image tar.gz)
+nix build .#docker
+sudo docker load < result                    # -> Loaded image: cryptovampire2-artifact:latest
+
+nix build .#docker-shell
+sudo docker load < result                    # -> cryptovampire2-artifact-shell:latest
+```
+
+Note: `result` is not an image name to `docker run`; it is a Docker **archive**
+that must be `docker load`ed first, after which you `docker run` the loaded
+name (e.g. `cryptovampire2-artifact:latest`).
+
+### 2. Run the full example suite
+
+```sh
+make -C docker run
+```
+
+This runs the **`make`** target of `examples/cryptovampire2/Makefile` (each
+`.scm` example, writing `results/results.csv`).  Results land in `./results/`
+on the host (mounted into the container).
+
+### 3. Parallel solver matrix
+
+```sh
+make -C docker test-solvers-parallel
+```
+
+Runs the `test-solvers-parallel` Makefile target (all solver configurations,
+all examples) — this is the long, parallel one.  By default a quick subset is
+run; override with e.g.
+`make -C docker test-solvers-parallel SOLVER_ARGS="CONFIGS=all-enabled CORES=8"`.
+
+### 4. Interactive shell with all tools
+
+```sh
+make -C docker shell
+```
+
+Drops into a shell where `cryptovampire2`, `vampire`, `z3`, `cvc5`,
+`python3`, `make` are on `PATH`, and `cwd` is the harness directory.  From
+there you can, e.g.:
+
+```sh
+./cryptovampire2 basic-hash.scm        # single example
+make                                    # full suite
+make test-solvers-parallel FILES="basic-hash.scm ddh-P.scm"
+```
+
+## Building the images (for the authors / nix users)
+
+The image is derived from this repository's nix flake.  On a nix machine:
+
+```sh
+make -C docker build-nix       # nix build .#docker .#docker-shell && docker load
+```
+
+The two flake outputs are:
+
+| output | image name | default behaviour |
+|---|---|---|
+| `.#docker` | `cryptovampire2-artifact` | runs the harness `make` (full suite) |
+| `.#docker-shell` | `cryptovampire2-artifact-shell` | drops into a shell |
+
+The underlying derivations live in [`nix/docker.nix`](../nix/docker.nix).
+Each image packs the **runtime closure** of the binary + solvers into
+`/nix/store` inside the image, so it is self-contained at runtime.  A fresh
+run copies the baked-in source into a writable `/workspace` (the harness
+writes `target/`-free: results only), so nothing is mutation of the image
+layers.
+
+### Building on a NixOS machine without a working docker daemon
+
+The images are produced by plain `nix build` (no docker daemon is needed to
+*build* them).  If your NixOS box has a docker daemon, `make -C docker
+build-nix` just works.  If not, the tarball can be produced anywhere: given
+the repository mounted read-only (e.g. at `/mnt`), run nix inside the
+`nixos/nix` container and pipe the result into `docker load`:
+
+```sh
+docker run --rm -i -v "$PWD":/mnt:ro --workdir /tmp nixos/nix \
+  sh -c 'nix build /mnt#docker -o result 1>&2 && cat result' | docker load
+```
+
+The root `Makefile` wraps all of this.  `IMAGE_BUILD` selects the strategy
+(`auto` = host nix if available, else the container; `host`; `container`),
+and `DOCKER` picks a plain `docker` or a group-scoped `sudo -u $USER -g docker`
+escalation automatically:
+
+```sh
+make enter-shell          # host nix -> build -> load -> shell
+make enter-shell IMAGE_BUILD=container   # force the nixos/nix container path
+make test-artifact
+make test-solvers-parallel
+```
+
+Container mode rebuilds the whole closure in a cold store, so it needs
+~15-25 GB free disk + network; prefer `auto`/host-nix or a prebuilt image.
+
+## Reproducibility & integrity
+
+Everything is pinned in-tree:
+
+- the git revision the artifact was built from: `$(git rev-parse HEAD)`
+- `Cargo.lock` (dependency-version lock) and `flake.lock` (nixpkgs + toolchain
+  pins),
+- the `steel` git dependency resolves to the revision recorded in
+  `Cargo.lock`,
+- solver versions: vampire `4.9`, plus the exact z3/cvc5 from the pinned
+  `nixos-unstable` revision in `flake.lock`.
+
+To reproduce byte-for-byte: check out the exact commit, `nix build
+.#docker`, and compare image digests (`docker inspect --format
+'{{.Id}}'`).  A full integrity manifest (image digests, base digests,
+toolchain hash) will be generated by the authors when a registry is chosen;
+it will be stored alongside this README and cited in the artifact appendix.
+
+## Notes / current limitations
+
+- **Registry**: the `REGISTRY` variable is currently a placeholder — the
+  images are distributed as tarballs (or locally loaded) until a registry is
+  chosen.
+- **ARM (macOS)**: images are `x86_64-linux`.  Apple-Silicon Docker runs them
+  via emulation; a native `aarch64-linux` image is a follow-up.
+- **Size**: the uncompressed image is ~0.7 GB (binary closures + solvers),
+  ~0.27 GB compressed.  It is intentionally free of any rust toolchain.
+- **No from-scratch Dockerfile yet**: reviewers consume the prebuilt binary +
+  solvers; a self-contained `Dockerfile`-based rebuild path (for those who
+  want to recompile everything with plain docker) is a planned follow-up.
