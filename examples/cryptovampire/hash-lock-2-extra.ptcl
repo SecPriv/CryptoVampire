@@ -1,3 +1,4 @@
+/* Injective agreement */
 type index;
 fun tpl(Message, Message):Message
 
@@ -12,13 +13,13 @@ fun ko:Message
 /* the Names */
 fun nt(index, index): Name
 fun nr(index): Name
-fun key(index):Name
+fun key(index, index):Name
 fun idx_eq(index):Name
 
 let m_condition_fst!(i:index, j:index, k:index, m_in: Message) = 
-    /*( hash(tpl(nr(j),sel1of2(m_in)), key(i)) 
+    /*( hash(tpl(nr(j),sel1of2(m_in)), key(i, k)) 
                     == sel2of2(m_in) )*/
-    verify(sel2of2(m_in), tpl(nr(j),sel1of2(m_in)), key(i))
+    verify(sel2of2(m_in), tpl(nr(j),sel1of2(m_in)), key(i, k))
 
 step reader1(i:index) 
     { true }
@@ -38,7 +39,7 @@ step tag(i:index, k:index)
         nt(i,k),
         hash(
             tpl(input(tag(i,k)),nt(i,k)),
-            key(i)
+            key(i, k)
         )
     )}
 
@@ -84,10 +85,9 @@ let conclusion!(j:index) =
     && conclusion2!(i, j, k)
 )}
 
-query forall (j:index) {(
-    happens(reader2(j))
-        => (premise!(j) => conclusion!(j)) 
-)}
+query forall (j:index) {
+     (premise!(j) == conclusion!(j)) 
+}
 
 assert-crypto euf-cma hash verify;
 assert-crypto nonce;

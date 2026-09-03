@@ -80,7 +80,7 @@ order forall (k:index) Reader0(k) < Reader(k);
 
 /* base cryptovampire doesn't natively support `exec` in protocol/query definition,
    hence we redefine it here (see the ddh examples). */
-let exec_pred!(t:Step) = (
+let pred_exec!(t:Step) = (
     s_happens(t) &&
     forall (i:index, j:index) {(s_lt(Tag(i,j), t) => cond!(Tag(i,j)))} &&
     forall (k:index) {(s_lt(Reader0(k), t) => cond!(Reader0(k)))} &&
@@ -94,7 +94,7 @@ let fdst2!(j:index) =
         (input(Reader(j)) == msg!(Tag(i,k)))
         && (input(Tag(i,k)) == msg!(Reader0(j)))
         && s_lt(Tag(i,k), Reader(j))
-        && exec_pred!(Reader(j)) && cond!(Reader(j))
+        && pred_exec!(Reader(j)) && cond!(Reader(j))
         ) }
         then { enc(
             tpl(tagR, tpl(nt(i,k), nr(j))),
@@ -119,7 +119,7 @@ let conclusion!(k:index) = exists (i:index, j:index) {(
      (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
      (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)  */
 query forall (j:index) {(
-    if (exec_pred!(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
+    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
     ==
-    if (exec_pred!(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
+    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
 )}

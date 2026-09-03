@@ -258,6 +258,18 @@ pub static MESSAGE_MACRO: Function<'static> = new_static_function(InnerFunction:
 pub static EXEC_MACRO: Function<'static> =
     new_static_function(InnerFunction::TermAlgebra(TermAlgebra::Macro(Macro::Exec)));
 
+/// `exec_pred : Step -> Bool`-as-`Condition`: the named "this step is executed
+/// and every step ordered strictly before it had its guard" predicate.
+///
+/// Being part of [`BUILT_IN_FUNCTIONS`] it is seeded into the parser
+/// namespace for every problem (cost: one reserved function name), so models
+/// can reference `exec_pred(...)` directly. Its *meaning* — a definitional
+/// axiom derived from the protocol's own steps — is emitted by
+/// `problem::general_assertions::exec` under `--exec-pred`.
+#[dynamic]
+pub static EXEC_PRED: Function<'static> =
+    Function::new_user_term_algebra(&StaticContainer, "exec_pred", [*STEP], *CONDITION).main;
+
 builtin!(
     AND,
     AND_TA,
@@ -289,6 +301,7 @@ builtin!(
     CONDITION_MACRO,
     MESSAGE_MACRO,
     EXEC_MACRO,
+    EXEC_PRED,
     LESS_THAN_STEP_SYMBOLIC,
     HAPPENS_SYMBOLIC
 );

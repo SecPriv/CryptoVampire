@@ -80,36 +80,60 @@ order forall (k:index) Reader0(k) < Reader(k);
 
 /* base cryptovampire doesn't natively support `exec` in protocol/query definition,
    hence we redefine it here (see the ddh examples). */
-let exec_pred!(t:Step) = (
-    happens(t) &&
-    forall (i:index, j:index) {(lt(Tag(i,j), t) => cond!(Tag(i,j)))} &&
-    forall (k:index) {(lt(Reader0(k), t) => cond!(Reader0(k)))} &&
-    forall (k:index) {(lt(Reader(k), t) => cond!(Reader(k)))}
+let pred_exec!(t:Step) = (
+    s_happens(t) &&
+    forall (i:index, j:index) {(s_lt(Tag(i,j), t) => cond!(Tag(i,j)))} &&
+    forall (k:index) {(s_lt(Reader0(k), t) => cond!(Reader0(k)))} &&
+    forall (k:index) {(s_lt(Reader(k), t) => cond!(Reader(k)))}
 )
 
 /* The idealized output of Reader(j): this is mk-fdst2 (Reader(j), j, p). */
 let fdst2!(j:index) =
-    if exists (i:index, k:index) {(
+     try find (i:index, k:index)
+        such that { (
         (input(Reader(j)) == msg!(Tag(i,k)))
-        && lt(Tag(i,k), Reader(j))
-        && exec_pred!(Reader(j))
-    )}
-    { try find (i:index, k:index)
-        such that { (input(Reader(j)) == msg!(Tag(i,k))) }
+        && (input(Tag(i,k)) == msg!(Reader0(j)))
+        && s_lt(Tag(i,k), Reader(j))
+        && pred_exec!(Reader(j)) && cond!(Reader(j))
+        ) }
         then { enc(
-            tpl(tagR, tpl(nr(j), nt(i,k))),
+            tpl(tagR, tpl(nt(i,k), nr(j))),
+            /*tpl(tagR,tpl(snd(snd(dec(input(Reader(k)), mk!(i,j)))), nr(k))),*/
             rr(j),
             mk!(i,k)
         ) }
-        else { ko } }
-    else { ko }
+        else { ko } 
+
+
+let condition!(i:index, j:index, k:index) = m_cond!(i,j,k, input(Reader(k)))
+let premise!(k:index) = exists (i:index, j:index) { condition!(i,j,k) }
+let conclusion!(k:index) = exists (i:index, j:index) {(
+    lt(Tag(i,j), Reader(k))
+    && lt(Reader0(k), Reader(k))
+    && (msg!(Tag(i,j)) == input(Reader(k)))
+    && (input(Tag(i,j)) == msg!(Reader0(k)))
+)}
 
 /* The add-rewrite: the output of Reader(j) equals the idealized output.
    This mirrors the scheme rewrite
      (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
      (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)  */
+let fdst2cond!(i:index, k:index, j:index) = (
+    (input(Reader(j)) == msg!(Tag(i,k)))
+    && (input(Tag(i,k)) == msg!(Reader0(j)))
+    && s_lt(Tag(i,k), Reader(j))
+    && pred_exec!(Reader(j)) && cond!(Reader(j))
+)
+
+lemma forall (j:index, i:index, k:index) { ((pred_exec!(Reader(j)) && cond!(Reader(j)) && condition!(i,k,j)) => exists (k2:index) { fdst2cond!(i,k2,j) }) }
+
+lemma forall (j:index, i:index, k:index) { ((pred_exec!(Reader(j)) && cond!(Reader(j)) && fdst2cond!(i,k,j)) => condition!(i,k,j)) }
+
+lemma forall (j:index, i:index, k:index) { ((pred_exec!(Reader(j)) && cond!(Reader(j)) && condition!(i,k,j) && fdst2cond!(i,k,j))
+    => (enc(tpl(tagR, tpl(snd(snd(dec(input(Reader(j)), mk!(i,k)))), nr(j))), rr(j), mk!(i,k))
+        == enc(tpl(tagR, tpl(nt(i,k), nr(j))), rr(j), mk!(i,k)))) }
 query forall (j:index) {(
-    if exec_pred!(Reader(j)) { msg!(Reader(j)) } else { empty }
+    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
     ==
-    if exec_pred!(Reader(j)) { fdst2!(j) } else { empty }
+    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
 )}

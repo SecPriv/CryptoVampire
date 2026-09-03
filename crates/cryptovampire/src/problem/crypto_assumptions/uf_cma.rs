@@ -17,9 +17,11 @@ use crate::environement::traits::KnowsRealm;
 use crate::formula::file_descriptior::axioms::Axiom;
 use crate::formula::file_descriptior::declare::Declaration;
 use crate::formula::formula::{ARichFormula, RichFormula, forall, meq};
-use crate::formula::function::Function;
+use crate::formula::function::{Function, InnerFunction};
 use crate::formula::function::builtin::{EQUALITY, EQUALITY_TA, MESSAGE_TO_BITSTRING};
 use crate::formula::function::inner::subterm::Subsubterm;
+use crate::formula::function::inner::term_algebra::TermAlgebra;
+use crate::formula::function::inner::term_algebra::quantifier::InnerQuantifier;
 use crate::formula::function::signature::StaticSignature;
 use crate::formula::manipulation::OneVarSubst;
 use crate::formula::sort::builtins::{MESSAGE, NAME};
@@ -196,12 +198,38 @@ impl<'bump> UfCma<'bump> {
         let tlt = pbl.list_top_level_terms().join("\n");
         trace!("top level terms: {tlt}");
 
-        let candidates = pbl
-            .list_top_level_terms()
-            .flat_map(|f| f.iter_with(AllTermsIterator, ())) // sad...
-            .flat_map(move |formula| match formula.as_ref() {
-                RichFormula::Fun(fun, args) => {
-                    trace!("{:}", formula.as_ref());
+        // NB: a verify-instance living inside a find-such-that *condition* is
+        // NOT a subterm of any top-level term -- the find term `ta$find$
+        // such_that$N(free...)` only carries its free arguments, the condition
+        // lives in the quantifier body. So a scan of the top-level terms alone
+        // misses e.g. the reader's `try find (i,k) such that { verify(...) }`
+        // decrypt-check, and the uf-cma origin-collapse instance for it is
+        // never emitted. Enumerate the find conditions explicitly so the
+        // instance is not missing.
+        let find_conditions = pbl
+            .functions()
+            .iter()
+            .filter_map(|f| match f.as_inner() {
+                InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
+                    if q.inner().is_find_such_that() =>
+                {
+                    let InnerQuantifier::FindSuchThat { condition, .. } = q.inner()
+                    else {
+                        unreachable!()
+                    };
+                    Some(condition)
+                }
+                _ => None,
+            });
+
+        let candidates = chain![
+            pbl.list_top_level_terms()
+                .flat_map(|f| f.iter_with(AllTermsIterator, ())), // sad...
+            find_conditions.flat_map(|c| c.iter_with(AllTermsIterator, ())),
+        ]
+        .flat_map(move |formula| match formula.as_ref() {
+            RichFormula::Fun(fun, args) => {
+                trace!("{:}", formula.as_ref());
                     chain![
                         // <-- using chain to not miss situations like hash(x, y) = hash(w, z)
                         if_chain! { // verify
