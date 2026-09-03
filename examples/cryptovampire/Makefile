@@ -1,37 +1,47 @@
+# Makefile for the cryptovampire (v1, .ptcl) corpus.
+#
+# How it works (make-like):
+#   * Each model declares its flags in a first-line pragma, resolved by
+#     ./flags.sh -- see that file for the token grammar. `-l` is always on.
+#   * For every runnable model we keep a stamp results/<name>.ok (gitignored),
+#     touched only on success. A stamp older than its .ptcl or than the rebuilt
+#     binary makes make rerun that model; failed models leave no stamp and are
+#     rerun on the next `make`. `make clean` drops all stamps.
+#   * No retries: one run per model, make stops at the first failure.
+# .NOTPARALLEL by design: running 20+ solvers concurrently just thrashes.
 
-# Makefile for running cryptovampire2 tests
-
-# 1. Get the absolute path of the current Makefile
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
-
-# 2. Extract just the directory portion from that path
 CURRENT_DIR := $(dir $(MKFILE_PATH))
 
-# Configuration
 PROJECT_DIR := ./../..
-CRATE_DIR := $(PROJECT_DIR)/crates/cryptovampire2
-# As per .cargo/config.toml in the project root
-# BUILD_DIR := /tmp/ccsa/build/dir/release
-BUILD_DIR := $(PROJECT_DIR)/target/release
+CRATE_DIR   := $(PROJECT_DIR)/crates/cryptovampire
+BUILD_DIR   := $(PROJECT_DIR)/target/release
 BINARY_NAME := cryptovampire
-BINARY := ./$(BINARY_NAME)
-RESULTS := $(CURRENT_DIR)results/results.csv
-SOURCES := $(wildcard *.ptcl)
-VAMPIRE_PATH :=vampire
+BINARY      := ./$(BINARY_NAME)
 
-# Ensure sequential execution
 .NOTPARALLEL:
 
-all: all-tests
+# Models whose pragma says `skip` are excluded from the run entirely.
+PTCL     := $(wildcard *.ptcl)
+SKIPPED  := $(shell for f in $(PTCL); do [ "$$(./flags.sh "$$f")" = "SKIP" ] && echo "$$f"; done)
+RUNNABLE := $(filter-out $(SKIPPED),$(PTCL))
+STAMPS   := $(patsubst %.ptcl,results/%.ok,$(RUNNABLE))
 
-.PHONY: force_cargo all-tests
+.PHONY: all clean force_cargo
+
+all: $(STAMPS)
+	@echo "OK: $(words $(STAMPS))/$(words $(PTCL)) models pass (skipped: $(words $(SKIPPED)))."
+
+clean:
+	@rm -rf results
 
 # Compile the crate and update the local binary if the build artifact changed.
-# We force cargo build to run every time to let it decide if recompilation is needed.
-# We only touch the local binary if the new build artifact is different to avoid unnecessary test runs.
+# We force the build to run every time so cargo decides if recompilation is
+# needed, and only re-copy the binary when the artifact differs (otherwise all
+# stamps would go stale on every `make`).
 $(BINARY): force_cargo
 	@if [ ! -f "$(BUILD_DIR)/$(BINARY_NAME)" ]; then \
-		echo "Error: Build artifact not found at $(BUILD_DIR)/$(BINARY_NAME)"; \
+		echo "Error: build artifact not found at $(BUILD_DIR)/$(BINARY_NAME)"; \
 		exit 1; \
 	fi
 	@if [ ! -f "$@" ] || ! cmp -s "$(BUILD_DIR)/$(BINARY_NAME)" "$@"; then \
@@ -40,49 +50,11 @@ $(BINARY): force_cargo
 	fi
 
 force_cargo:
-	cd $(CRATE_DIR) &&  cargo lbuild --release -p cryptovampire
+	cd $(CRATE_DIR) && cargo build --release -p cryptovampire
 
+results:
+	@mkdir -p results
 
-# Default target
-#
-# Per-file flags are derived content-aware:
-#   * uses the tool symbol `exec_pred(`    -> --exec-pred
-#   * declares `lemma`s (^lemma)           -> -l
-#   * add-rewrite / feldhofer-ind models   -> --pairwise-find-fa
-# So e.g. ddh-p-2-1 / ddh-s-2-1 (which put `exec_pred` in the query) get
-# `--exec-pred` automatically instead of silently running it uninterpreted.
-#
-# Default timeouts: 15s for plain models, 20s for the pairwise-find-fa
-# models (10-20s is enough) -- override both with TIMEOUT=... .
-# Each test gets up to 2 attempts (some models, e.g. mw-2-ra, are flaky;
-# the README recommends a rerun); a test that still fails makes this target
-# fail.
-# The *-add-rewrite-1.ptcl models are the correct one-index add-rewrites, but
-# their fa-forward needs an exists-witness the solvers don't close at sane
-# timeouts; use the -2 (two-index) variants. They are skipped here.
-PLAIN_TIMEOUT    := $(if $(TIMEOUT),$(TIMEOUT),15)
-PAIRWISE_TIMEOUT := $(if $(TIMEOUT),$(TIMEOUT),20)
-
-all-tests: $(BINARY) $(SOURCES)
-	@for file in $(SOURCES); do \
-		BEFORE=""; AFTER=""; TIMEO="$(PLAIN_TIMEOUT)"; \
-		case "$$file" in \
-			*-add-rewrite-1.ptcl) \
-				echo "SKIP $$file (one-index add-rewrite is correct but does not close at sane timeouts; see the -2 variants)"; \
-				continue;; \
-			*-add-rewrite*.ptcl|feldhofer-ind*.ptcl) \
-				BEFORE="--pairwise-find-fa"; TIMEO="$(PAIRWISE_TIMEOUT)";; \
-		esac; \
-		if grep -q "exec_pred(" "$$file"; then BEFORE="--exec-pred $$BEFORE"; fi; \
-		if grep -q "^lemma" "$$file"; then AFTER="$$AFTER -l"; fi; \
-		echo "Running test: $$file [$$BEFORE auto $$AFTER] (timeout $$TIMEO)"; \
-		attempt=1; \
-		until $(BINARY) "$$file" $$BEFORE auto $$AFTER --timeout $$TIMEO; do \
-			attempt=$$((attempt+1)); \
-			if [ $$attempt -gt 2 ]; then \
-				echo "TEST FAILED: $$file"; \
-				exit 1; \
-			fi; \
-			echo "  ...retrying $$file (attempt $$attempt/2)..."; \
-		done; \
-	done
+results/%.ok: %.ptcl $(BINARY) | results
+	@echo "TEST  $<  flags:[$$(TIMEOUT="$(TIMEOUT)" ./flags.sh "$<")]"; \
+	$(BINARY) "$<" $$(TIMEOUT="$(TIMEOUT)" ./flags.sh "$<") && touch "$@"

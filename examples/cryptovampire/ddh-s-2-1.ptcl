@@ -1,3 +1,4 @@
+/* @cryptovampire run: --exec-pred */
 type index;
 fun tpl(Message, Message):Message
 

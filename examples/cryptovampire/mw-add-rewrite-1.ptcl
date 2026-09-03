@@ -1,3 +1,4 @@
+/* @cryptovampire run: --exec-pred skip */
 /*
 PROOF MODEL (tool-provided exec_pred): same add-rewrite + guarded-bridge
 lemma as the plain/named versions, but the exec guard is the TOOL-PRODUCED

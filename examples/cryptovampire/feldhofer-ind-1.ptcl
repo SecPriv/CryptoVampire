@@ -1,3 +1,4 @@
+/* @cryptovampire run: --exec-pred --pairwise-find-fa */
 /*
 Prove the add-rewrite (the "lemma" rewrite) for the left protocol (p1).
 In this protocol the key depends only on the first index: mk!(i,j) = key(i).

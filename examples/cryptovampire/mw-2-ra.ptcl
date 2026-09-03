@@ -1,3 +1,4 @@
+/* @cryptovampire run: timeout=30 */
 type index;
 fun tpl(Message, Message):Message
 
