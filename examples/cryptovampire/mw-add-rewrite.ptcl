@@ -116,7 +116,7 @@ order forall (j:index)
 
 /* base cryptovampire doesn't natively support `exec` in protocol/query definition,
    hence we redefine it here (see the feldhofer/ddh examples). */
-let exec_pred!(t:Step) = (
+let pred_exec!(t:Step) = (
     s_happens(t) &&
     forall (i:index, k:index) {(s_lt(tag(i,k), t) => cond!(tag(i,k)))} &&
     forall (j:index) {(s_lt(reader1(j), t) => cond!(reader1(j)))} &&
@@ -132,7 +132,7 @@ let fdst2!(r:index) =
         (input(tag(i,t)) == msg(reader1(r)))
         && (sel1of2(input(reader2(r))) == sel1of2(msg!(tag(i,t))))
         && (sel2of2(input(reader2(r))) == sel2of2(msg!(tag(i,t))))
-        && exec_pred!(reader2(r))
+        && pred_exec!(reader2(r))
         && s_lt(reader1(r), tag(i,t))
         && s_lt(tag(i,t), reader2(r))
         ) }
@@ -141,7 +141,7 @@ let fdst2!(r:index) =
             hash(tpl(tpl(nr(r), sel1of2(input(reader2(r)))), tag2), mkey!(i, t))) }
         else { ko }
 
-query forall(r:index,i:index,t:index) {(exec_pred!(reader2(r)) => (
+query forall(r:index,i:index,t:index) {(pred_exec!(reader2(r)) => (
     
         verify(
             m_xor(id(i, t), sel2of2(input(reader2(r)))),
@@ -160,7 +160,7 @@ query forall(r:index,i:index,t:index) {(exec_pred!(reader2(r)) => (
         (sel2of2(msg!(tag(i, t))) == sel2of2(input(reader2(r)))) &&
         lt(reader1(r),tag(i, t)) &&
         (msg!(reader1(r)) == input(tag(i, t)))
-        && exec_pred!(reader2(r))
+        && pred_exec!(reader2(r))
     )
 
 ))}
@@ -168,9 +168,9 @@ query forall(r:index,i:index,t:index) {(exec_pred!(reader2(r)) => (
 /* The add-rewrite: at an executing reader2(r), the reader's output (mk-fdst1)
    equals the idealized output (mk-fdst2). */
 /*query forall (r:index) {(
-    if (exec_pred!(reader2(r)) && cond!(reader2(r))) { msg!(reader2(r)) } else {empty}
+    if (pred_exec!(reader2(r)) && cond!(reader2(r))) { msg!(reader2(r)) } else {empty}
     ==
-    if (exec_pred!(reader2(r)) && cond!(reader2(r))) { fdst2!(r) } else {empty}
+    if (pred_exec!(reader2(r)) && cond!(reader2(r))) { fdst2!(r) } else {empty}
 )}*/
 
 assert-crypto euf-cma hash verify;

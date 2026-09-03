@@ -1,7 +1,7 @@
 /*
 PROOF MODEL (tool-provided exec_pred): same lak-tag add-rewrite + guarded-
 bridge lemma, using the TOOL-PRODUCED `exec_pred` symbol (cryptovampire
---exec-pred) instead of any hand-written exec_pred!/epred. Preferred way to
+--exec-pred) instead of any hand-written pred_exec! / pred_exec. Preferred way to
 get a named exec predicate.
 
 HOW TO RUN:

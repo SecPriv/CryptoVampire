@@ -135,7 +135,7 @@ assert-crypto nonce;
 )}*/
 
 /* base cryptovampire doesn't natively support `exec` in protocol/query definition, hence we redefine it here */
-let exec_pred!(t:Step) = (
+let pred_exec!(t:Step) = (
     happens(t) &&
     forall (i:index) {(lt(Pchall1(i), t) => cond!(Pchall1(i)))} &&
     forall (i:index) {(lt(Pchall2(i), t) => cond!(Pchall2(i)))} &&
@@ -146,5 +146,5 @@ let exec_pred!(t:Step) = (
 )
 
 query forall (j:index, i:index) {
-    ((exec_pred!(Pchall3bis(i)) && cond!(Pchall3bis(i))) <=> false)
+    ((pred_exec!(Pchall3bis(i)) && cond!(Pchall3bis(i))) <=> false)
 }

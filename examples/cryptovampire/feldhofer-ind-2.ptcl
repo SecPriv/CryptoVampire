@@ -80,7 +80,7 @@ order forall (k:index) Reader0(k) < Reader(k);
 
 /* base cryptovampire doesn't natively support `exec` in protocol/query definition,
    hence we redefine it here (see the ddh examples). */
-let exec_pred!(t:Step) = (
+let pred_exec!(t:Step) = (
     s_happens(t) &&
     forall (i:index, j:index) {(s_lt(Tag(i,j), t) => cond!(Tag(i,j)))} &&
     forall (k:index) {(s_lt(Reader0(k), t) => cond!(Reader0(k)))} &&
@@ -94,7 +94,7 @@ let fdst2!(j:index) =
         (input(Reader(j)) == msg!(Tag(i,k)))
         && (input(Tag(i,k)) == msg!(Reader0(j)))
         && s_lt(Tag(i,k), Reader(j))
-        && exec_pred!(Reader(j)) && cond!(Reader(j))
+        && pred_exec!(Reader(j)) && cond!(Reader(j))
         ) }
         then { enc(
             tpl(tagR, tpl(nt(i,k), nr(j))),
@@ -122,18 +122,18 @@ let fdst2cond!(i:index, k:index, j:index) = (
     (input(Reader(j)) == msg!(Tag(i,k)))
     && (input(Tag(i,k)) == msg!(Reader0(j)))
     && s_lt(Tag(i,k), Reader(j))
-    && exec_pred!(Reader(j)) && cond!(Reader(j))
+    && pred_exec!(Reader(j)) && cond!(Reader(j))
 )
 
-lemma forall (j:index, i:index, k:index) { ((exec_pred!(Reader(j)) && cond!(Reader(j)) && condition!(i,k,j)) => exists (k2:index) { fdst2cond!(i,k2,j) }) }
+lemma forall (j:index, i:index, k:index) { ((pred_exec!(Reader(j)) && cond!(Reader(j)) && condition!(i,k,j)) => exists (k2:index) { fdst2cond!(i,k2,j) }) }
 
-lemma forall (j:index, i:index, k:index) { ((exec_pred!(Reader(j)) && cond!(Reader(j)) && fdst2cond!(i,k,j)) => condition!(i,k,j)) }
+lemma forall (j:index, i:index, k:index) { ((pred_exec!(Reader(j)) && cond!(Reader(j)) && fdst2cond!(i,k,j)) => condition!(i,k,j)) }
 
-lemma forall (j:index, i:index, k:index) { ((exec_pred!(Reader(j)) && cond!(Reader(j)) && condition!(i,k,j) && fdst2cond!(i,k,j))
+lemma forall (j:index, i:index, k:index) { ((pred_exec!(Reader(j)) && cond!(Reader(j)) && condition!(i,k,j) && fdst2cond!(i,k,j))
     => (enc(tpl(tagR, tpl(snd(snd(dec(input(Reader(j)), mk!(i,k)))), nr(j))), rr(j), mk!(i,k))
         == enc(tpl(tagR, tpl(nt(i,k), nr(j))), rr(j), mk!(i,k)))) }
 query forall (j:index) {(
-    if (exec_pred!(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
+    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
     ==
-    if (exec_pred!(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
+    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
 )}

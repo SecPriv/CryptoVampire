@@ -13,8 +13,8 @@ use crate::problem::problem::Problem;
 use crate::mforall;
 
 /// Emit the definitional axiom for the named `exec_pred : Step -> Bool`
-/// symbol, generalising the hand-written `exec_pred!` / `epred` trick used in
-/// the mw / lak-tag add-rewrite models.
+/// symbol, generalising the hand-written `pred_exec!` macro / `pred_exec`
+/// named-function trick used in the mw / lak-tag add-rewrite models.
 ///
 /// `exec_pred` itself is a builtin ([`crate::formula::function::builtin::EXEC_PRED`],
 /// part of `BUILT_IN_FUNCTIONS`), so it is always declared and referencable;

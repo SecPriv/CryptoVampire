@@ -1,14 +1,14 @@
 /*
 PROOF MODEL (named exec): same add-rewrite + guarded-bridge lemma as
 mw-add-rewrite-plain.ptcl, but the exec guard is a NAMED symbol
-    fun epred(Step):Bool + definitional assert (forall t. epred(t) <=> ...)
-hand-written in this file instead of the in-lined exec_pred! macro. Naming
+    fun pred_exec(Step):Bool + definitional assert (forall t. pred_exec(t) <=> ...)
+hand-written in this file instead of the in-lined pred_exec! macro. Naming
 was the original "trick"; it turns out NOT to be required (the plain version
 proves identically) — kept here as a variant for comparison.
 
 HOW TO RUN:
     cryptovampire mw-add-rewrite-named-exec.ptcl --pairwise-find-fa auto -l --timeout 15
-  No --exec-pred: this file declares its own `epred`. Same solver / retry
+  No --exec-pred: this file declares its own `pred_exec`. Same solver / retry
   notes as the plain version.
 */
 /*
@@ -129,10 +129,10 @@ order forall (j:index)
 
 /* base cryptovampire doesn't natively support `exec` in protocol/query definition,
    hence we redefine it here (see the feldhofer/ddh examples). */
-fun epred(Step):Bool
+fun pred_exec(Step):Bool
 
 assert forall (t:Step) {(
-    epred(t)
+    pred_exec(t)
     <=>
     (
         s_happens(t) &&
@@ -151,7 +151,7 @@ let fdst2!(r:index) =
         (input(tag(i,t)) == msg!(reader1(r)))
         && (sel1of2(input(reader2(r))) == sel1of2(msg!(tag(i,t))))
         && (sel2of2(input(reader2(r))) == sel2of2(msg!(tag(i,t))))
-        && epred(reader2(r))
+        && pred_exec(reader2(r))
         && s_lt(reader1(r), tag(i,t))
         && s_lt(tag(i,t), reader2(r))
         ) }
@@ -160,7 +160,7 @@ let fdst2!(r:index) =
             hash(tpl(tpl(nr(r), sel1of2(input(reader2(r)))), tag2), mkey!(i, t))) }
         else { ko }
 
-lemma forall(r:index,i:index,t:index) {(epred(reader2(r)) => (
+lemma forall(r:index,i:index,t:index) {(pred_exec(reader2(r)) => (
     
         verify(
             m_xor(id(i, t), sel2of2(input(reader2(r)))),
@@ -179,7 +179,7 @@ lemma forall(r:index,i:index,t:index) {(epred(reader2(r)) => (
         (sel2of2(msg!(tag(i, t))) == sel2of2(input(reader2(r)))) &&
         lt(reader1(r),tag(i, t)) &&
         (msg!(reader1(r)) == input(tag(i, t)))
-        && epred(reader2(r))
+        && pred_exec(reader2(r))
     )
 
 ))}
@@ -187,9 +187,9 @@ lemma forall(r:index,i:index,t:index) {(epred(reader2(r)) => (
 /* The add-rewrite: at an executing reader2(r), the reader's output (mk-fdst1)
    equals the idealized output (mk-fdst2). */
 query forall (r:index) {(
-    if (epred(reader2(r)) && cond!(reader2(r))) { msg!(reader2(r)) } else {empty}
+    if (pred_exec(reader2(r)) && cond!(reader2(r))) { msg!(reader2(r)) } else {empty}
     ==
-    if (epred(reader2(r)) && cond!(reader2(r))) { fdst2!(r) } else {empty}
+    if (pred_exec(reader2(r)) && cond!(reader2(r))) { fdst2!(r) } else {empty}
 )}
 
 assert-crypto euf-cma hash verify;

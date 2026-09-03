@@ -1,7 +1,7 @@
 /*
 PROOF MODEL (tool-provided exec_pred): same add-rewrite + guarded-bridge
 lemma as the plain/named versions, but the exec guard is the TOOL-PRODUCED
-named symbol `exec_pred` (cryptovampire --exec-pred). No exec_pred!/epred
+named symbol `exec_pred` (cryptovampire --exec-pred). No pred_exec! / pred_exec
 macro or fun is defined in this file: the tool seeds `exec_pred : Step -> Bool`
 into the parser namespace and derives its definitional axiom from the
 protocol's own steps. Preferred way to get a named exec predicate.
