@@ -222,6 +222,10 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
         general_assertions::evaluate::generate(assertions, declarations, env, self);
         trace!("[G]\t\t[DONE]");
 
+        trace!("[G]\t- fa pairwise...");
+        general_assertions::evaluate::pairwise_find_fa(assertions, declarations, env, self);
+        trace!("[G]\t\t[DONE]");
+
         trace!("[G]\t- crypto...");
         assertions.push(Axiom::Comment("crypto".into()));
         for crypto in &self.crypto_assertions {

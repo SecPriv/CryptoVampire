@@ -2,14 +2,16 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 use itertools::Itertools;
-use logic_formula::iterators::UsedVariableIterator;
 use log::trace;
+use logic_formula::iterators::UsedVariableIterator;
 
 use crate::environement::environement::Environement;
 use crate::formula::file_descriptior::axioms::{Axiom, Rewrite, RewriteKind};
 use crate::formula::file_descriptior::declare::Declaration;
-use crate::formula::formula::{self, meq, ARichFormula, RichFormula};
-use crate::formula::function::builtin::{EQUALITY, FALSE_F, IF_THEN_ELSE, TRUE_F, BUILT_IN_FUNCTIONS};
+use crate::formula::formula::{self, ARichFormula, RichFormula, meq};
+use crate::formula::function::builtin::{
+    BUILT_IN_FUNCTIONS, EQUALITY, FALSE_F, IF_THEN_ELSE, TRUE_F,
+};
 use crate::formula::function::inner::term_algebra::TermAlgebra;
 use crate::formula::function::inner::term_algebra::connective::{BaseConnective, Connective};
 use crate::formula::function::inner::term_algebra::quantifier::{InnerQuantifier, Quantifier};
@@ -124,9 +126,7 @@ pub fn generate<'bump>(
                         meq(
                             pbl.evaluator()
                                 .eval(f.apply(vars.iter().map(|v| v.into_formula()))),
-                            ev.f(vars
-                                .iter()
-                                .map(|v| pbl.evaluator().eval(v.into_aformula()))),
+                            ev.f(vars.iter().map(|v| pbl.evaluator().eval(v.into_aformula()))),
                         )
                     }))
                 }),
@@ -235,11 +235,6 @@ pub fn generate<'bump>(
             _ => continue,
         }
     }
-
-    // Experimental "pairwise find-such-that FA" axiom (see [pairwise_find_fa]).
-    if env.pairwise_find_fa() {
-        pairwise_find_fa(assertions, declarations, env, pbl);
-    }
 }
 
 /// Emit the experimental pairwise find-such-that "FA" axioms (trusted).
@@ -276,12 +271,19 @@ pub fn generate<'bump>(
 /// fresh ids cannot collide with them, but this is an implicit assumption — new
 /// encodings must keep all surviving ids `≤ pbl.max_var()` (or allocate fresh
 /// ids that are provably disjoint).
-fn pairwise_find_fa<'bump>(
+pub fn pairwise_find_fa<'bump>(
     assertions: &mut Vec<Axiom<'bump>>,
     _declarations: &mut Vec<Declaration<'bump>>,
-    _env: &Environement<'bump>,
+    env: &Environement<'bump>,
     pbl: &Problem<'bump>,
 ) {
+    // Experimental "pairwise find-such-that FA" axiom (see [pairwise_find_fa]).
+    if !env.pairwise_find_fa() {
+        return;
+    }
+
+    assertions.push(Axiom::Comment("fa pairs".into()));
+
     let finds: Vec<(&Function<'bump>, &Quantifier<'bump>)> = pbl
         .functions()
         .iter()
@@ -404,12 +406,16 @@ fn pairwise_find_fa<'bump>(
         let hypotheses = formula::ands([fwd_clause, bwd_clause, then_clause, else_clause]);
 
         let conclusion = meq(
-            pbl.evaluator().eval(f1.apply(fv.iter().map(|v| v.into_formula()))),
-            pbl.evaluator().eval(f2.apply(fv.iter().map(|v| v.into_formula()))),
+            pbl.evaluator()
+                .eval(f1.apply(fv.iter().map(|v| v.into_formula()))),
+            pbl.evaluator()
+                .eval(f2.apply(fv.iter().map(|v| v.into_formula()))),
         );
 
         // `all_vars` is moved into the outer binder.
-        assertions.push(Axiom::base(mforall!(all_vars, { hypotheses >> conclusion })));
+        assertions.push(Axiom::base(mforall!(all_vars, {
+            hypotheses >> conclusion
+        })));
     }
 }
 
@@ -458,6 +464,10 @@ pub(crate) fn eval_condition<'bump>(
 /// `pred_exec!` block, so it restores — not corrupts — the honest meaning; the
 /// widening happens only in non-honest models, consistent with this being a
 /// documented trusted strengthening.
+///
+/// ---
+/// *NB*: this is correct slop. But I still believe this functionnality already
+/// existed somewhere in a nicer way.
 fn push_down_condition<'bump>(
     f: &ARichFormula<'bump>,
     pbl: &Problem<'bump>,
@@ -465,9 +475,7 @@ fn push_down_condition<'bump>(
     // `f` must be `(evaluate_cond <Condition term>)`, as produced by
     // `pbl.evaluator().eval` on a Condition. Anything else is left as-is.
     let term = match f.as_inner() {
-        RichFormula::Fun(fun, args)
-            if matches!(fun.as_inner(), InnerFunction::Evaluate(e) if e.name() == "evaluate_cond") =>
-        {
+        RichFormula::Fun(fun, args) if matches!(fun.as_inner(), InnerFunction::Evaluate(e) if e.name() == "evaluate_cond") => {
             args[0].shallow_copy()
         }
         _ => return f.shallow_copy(),
@@ -476,16 +484,16 @@ fn push_down_condition<'bump>(
         RichFormula::Var(_) | RichFormula::Quantifier(_, _) => f.shallow_copy(),
         RichFormula::Fun(tfun, targs) => match tfun.as_inner() {
             InnerFunction::TermAlgebra(TermAlgebra::Condition(c)) => match c {
-                Connective::BaseConnective(BaseConnective::And) => {
-                    formula::ands(targs.iter().map(|a| {
-                        push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)
-                    }))
-                }
-                Connective::BaseConnective(BaseConnective::Or) => {
-                    formula::ors(targs.iter().map(|a| {
-                        push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)
-                    }))
-                }
+                Connective::BaseConnective(BaseConnective::And) => formula::ands(
+                    targs
+                        .iter()
+                        .map(|a| push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)),
+                ),
+                Connective::BaseConnective(BaseConnective::Or) => formula::ors(
+                    targs
+                        .iter()
+                        .map(|a| push_down_condition(&pbl.evaluator().eval(a.clone()), pbl)),
+                ),
                 Connective::BaseConnective(BaseConnective::Not) => {
                     !push_down_condition(&pbl.evaluator().eval(targs[0].clone()), pbl)
                 }

@@ -44,19 +44,27 @@ pub struct Args {
     #[arg(long)]
     pub no_preprocessing: bool,
 
-    /// add (|x1| == |x1'|)/\.../\(|xn| == |xn'|) => |f(x1,...,xn)| == |f(x1',...,xn')| axioms
+    /// deprectated: add (|x1| == |x1'|)/\.../\(|xn| == |xn'|) => |f(x1,...,xn)| == |f(x1',...,xn')| axioms
     #[arg(long)]
     pub legacy_evaluate: bool,
 
     /// experimental: emit the pairwise find-such-that FA axiom (trusted)
+    /// 
+    /// > Because `try find`s are the source of all evil.
+    /// 
+    /// This options enables a sound but slightly nasty axiom to mimick squirrel's `fa` tactic.
+    /// 
+    /// Quadratic in the number of `try find`.
     #[arg(long)]
     pub pairwise_find_fa: bool,
 
     /// declare a named `exec_pred` symbol + its definitional axiom from the protocol steps
+    /// 
+    /// Automatically generated `exec` macro for `exec(pred(t))`. 
     #[arg(long)]
     pub exec_pred: bool,
 
-    /// remove the bitstring functions, evaluation must then be handeled by something else
+    /// deprecated: remove the bitstring functions, evaluation must then be handeled by something else
     #[arg(long)]
     pub no_bitstring: bool,
 
@@ -105,7 +113,7 @@ pub struct ToFile {
     #[arg(short, long, value_name = "FILE|DIR", default_value = "/dev/stdout")]
     pub output_location: PathBuf,
 
-    /// uses the lemmas
+    /// uses the lemmas. `off` by default for legacy reasons
     ///
     /// It will generate multiples files
     ///     lemma_0: output_location/0.smt
@@ -154,11 +162,11 @@ pub struct Auto {
     /// Upper bound of how many tries on the vampire runner
     ///
     /// 0 for an infinite number of tries
-    #[arg(long, default_value = "5")]
+    #[arg(long, short, default_value = "5")]
     pub num_of_retry: u32,
 
     /// Vampire execution time
-    #[arg(long, default_value = "1")]
+    #[arg(long, short, default_value = "1")]
     pub timeout: f64,
 
     /// A folder to put temporary smt files

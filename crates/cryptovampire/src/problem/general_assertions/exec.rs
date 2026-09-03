@@ -3,7 +3,7 @@ use crate::formula::file_descriptior::axioms::Axiom;
 use crate::formula::file_descriptior::declare::Declaration;
 use crate::formula::formula::{ARichFormula, ands, meq};
 use crate::formula::function::builtin::{
-    CONDITION_TO_BOOL, EXEC_PRED, HAPPENS_SYMBOLIC, IMPLIES, LESS_THAN_STEP_SYMBOLIC,
+    CONDITION_TO_BOOL, EXEC_PRED, HAPPENS, HAPPENS_SYMBOLIC, IMPLIES, LESS_THAN_STEP, LESS_THAN_STEP_SYMBOLIC,
 };
 use crate::formula::sort::builtins::STEP;
 use crate::formula::utils::Applicable;
@@ -49,8 +49,8 @@ pub fn generate<'bump>(
     let exec_pred = *EXEC_PRED;
 
     let ecl = *CONDITION_TO_BOOL; // evaluate_cond : Condition -> Bool
-    let s_lt = *LESS_THAN_STEP_SYMBOLIC; // s_lt : Step, Step -> Condition
-    let s_happens = *HAPPENS_SYMBOLIC; // s_happens : Step -> Condition
+    let lt = *LESS_THAN_STEP; // s_lt : Step, Step -> Condition
+    let happens = *HAPPENS; // s_happens : Step -> Condition
     let step = *STEP;
     let steps: Vec<_> = pbl
         .protocol()
@@ -66,7 +66,7 @@ pub fn generate<'bump>(
     next += 1;
 
     let mut conjuncts: Vec<ARichFormula<'_>> = Vec::with_capacity(steps.len() + 1);
-    conjuncts.push(eval_condition(pbl, s_happens.f([t.clone()])));
+    conjuncts.push(happens.f([t]));
     for s in steps {
         let n = s.arity();
         let sorts: Vec<_> = s.parameters().cloned().collect();
@@ -77,14 +77,14 @@ pub fn generate<'bump>(
         let args: Vec<ARichFormula<'_>> = vars.iter().cloned().map(Into::into).collect();
         let guard = s.apply_condition(&args);
         let step_term = s.function().f(args.clone());
-        let before = eval_condition(pbl, s_lt.f([step_term, t.clone().into()]));
+        let before =  lt.f([step_term, t.into()]);
         // push `evaluate_cond` down into the step's guard, like the macro did
         let after = eval_condition(pbl, guard);
         conjuncts.push(mforall!(vars.into_iter(), { IMPLIES.f([before, after]) }));
     }
 
     let composite = ands(conjuncts);
-    let a = ecl.f([exec_pred.f([t.clone()])]);
+    let a = ecl.f([exec_pred.f([t])]);
     let def = mforall!([t], { meq(a, composite) });
 
     assertions.push(Axiom::base(def));

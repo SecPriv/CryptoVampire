@@ -78,15 +78,6 @@ step Reader(k:index)
 
 order forall (k:index) Reader0(k) < Reader(k);
 
-/* base cryptovampire doesn't natively support `exec` in protocol/query definition,
-   hence we redefine it here (see the ddh examples). */
-let pred_exec!(t:Step) = (
-    s_happens(t) &&
-    forall (i:index, j:index) {(s_lt(Tag(i,j), t) => cond!(Tag(i,j)))} &&
-    forall (k:index) {(s_lt(Reader0(k), t) => cond!(Reader0(k)))} &&
-    forall (k:index) {(s_lt(Reader(k), t) => cond!(Reader(k)))}
-)
-
 /* The idealized output of Reader(j): this is mk-fdst2 (Reader(j), j, p). */
 let fdst2!(j:index) =
      try find (i:index, k:index)
@@ -94,11 +85,10 @@ let fdst2!(j:index) =
         (input(Reader(j)) == msg!(Tag(i,k)))
         && (input(Tag(i,k)) == msg!(Reader0(j)))
         && s_lt(Tag(i,k), Reader(j))
-        && pred_exec!(Reader(j)) && cond!(Reader(j))
+        && exec_pred(Reader(j)) && cond!(Reader(j))
         ) }
         then { enc(
             tpl(tagR, tpl(nt(i,k), nr(j))),
-            /*tpl(tagR,tpl(snd(snd(dec(input(Reader(k)), mk!(i,j)))), nr(k))),*/
             rr(j),
             mk!(i,k)
         ) }
@@ -119,7 +109,7 @@ let conclusion!(k:index) = exists (i:index, j:index) {(
      (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)
      (m_ite (macro_exec (r2 j) p) (mk-fdst2 (r2 j) j p) mempty)  */
 query forall (j:index) {(
-    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
+    if (exec_pred(Reader(j)) && cond!(Reader(j))) { msg!(Reader(j)) } else {empty}
     ==
-    if (pred_exec!(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
+    if (exec_pred(Reader(j)) && cond!(Reader(j))) { fdst2!(j) } else {empty}
 )}

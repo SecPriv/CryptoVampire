@@ -1,4 +1,3 @@
-use if_chain::if_chain;
 use logic_formula::outers::RefPile;
 use logic_formula::{Content, FormulaIterator, IteratorHelper};
 
@@ -6,7 +5,6 @@ use super::super::call::{InputCall, StepCall};
 use super::{Edges, FromNode, GlobNode, InnerCellCall, ToNode};
 use crate::formula::formula::{ARichFormula, RichFormula};
 use crate::formula::function::InnerFunction;
-use crate::formula::function::inner::step::StepFunction;
 use crate::formula::function::inner::term_algebra::{TermAlgebra, step_macro};
 use crate::formula::sort::builtins::STEP;
 use crate::formula::variable::Variable;
@@ -112,33 +110,18 @@ impl<'a, 'bump> FormulaIterator<ARichFormula<'bump>> for ToNodeIterator<'a, 'bum
                     helper.push_result(to_node);
                 }
                 InnerFunction::TermAlgebra(TermAlgebra::Macro(m)) => {
-                    assert!(
-                        args.len() == 1,
-                        "wrong number of arguments for a macro application"
-                    );
-                    let arg = args.first().unwrap();
-                    let (step, args) = if_chain! {
-                        if let RichFormula::Fun(f, args) = arg.as_ref();
-                        if let InnerFunction::Step(StepFunction::Step(s)) = f.as_inner();
-                        then {
-                            (s.step(), args)
-                        } else {
-                            unreachable!("macros must be apply to concrete steps in protocols")
-                        }
-                    };
+                    // `cond!`/`msg!` are expanded at parse time, so only
+                    // `input`/`exec` macros can appear here.
                     match m {
-                        step_macro::Macro::Condition => {
-                            helper.extend_child_with_default([step.apply_condition(args.as_ref())])
-                        }
-                        step_macro::Macro::Message => {
-                            helper.extend_child_with_default([step.apply_message(args.as_ref())])
-                        }
                         step_macro::Macro::Exec => unreachable!("exec is not allowed in protocols"),
                         step_macro::Macro::Input => {
                             let to_node = ToNode::Input(InputCall {
                                 step: StepCall::General(current.clone()),
                             });
                             helper.push_result(to_node)
+                        }
+                        step_macro::Macro::Condition | step_macro::Macro::Message => {
+                            unreachable!("cond!/msg! are expanded at parse time and never appear here")
                         }
                     };
                 }

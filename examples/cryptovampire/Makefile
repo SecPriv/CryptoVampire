@@ -72,13 +72,8 @@ all-tests: $(BINARY) $(SOURCES)
 				BEFORE="--pairwise-find-fa"; AFTER="-l";; \
 		esac; \
 		echo "Running test: $$file $$BEFORE auto $$AFTER"; \
-		attempt=1; \
-		until $(BINARY) "$$file" $$BEFORE auto $$AFTER --timeout $(TEST_TIMEOUT); do \
-			attempt=$$((attempt+1)); \
-			if [ $$attempt -gt 2 ]; then \
-				echo "TEST FAILED: $$file"; \
-				exit 1; \
-			fi; \
-			echo "  ...retrying $$file (attempt $$attempt/2)..."; \
-		done; \
+		$(BINARY) "$$file" $$BEFORE auto $$AFTER --timeout $(TEST_TIMEOUT) || { \
+			echo "TEST FAILED: $$file"; \
+			exit 1; \
+		}; \
 	done

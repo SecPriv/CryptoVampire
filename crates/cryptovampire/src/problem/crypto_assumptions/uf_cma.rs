@@ -206,6 +206,9 @@ impl<'bump> UfCma<'bump> {
         // decrypt-check, and the uf-cma origin-collapse instance for it is
         // never emitted. Enumerate the find conditions explicitly so the
         // instance is not missing.
+        //
+        // This looks like a sound suggesting from the AI.
+        // It might lead to crashes due to variables escaping their scope. (but it shouldn't)
         let find_conditions = pbl
             .functions()
             .iter()

@@ -257,13 +257,13 @@ impl<'bump> Step<'bump> {
 
     pub fn apply_condition(&self, args: &[ARichFormula<'bump>]) -> ARichFormula<'bump> {
         self.assert_valid().unwrap();
-        let vars: Vec<_> = (1..=self.arity()).collect_vec();
+        let vars: Vec<_> = (0..self.arity()).collect_vec();
         self.condition().clone().apply_substitution(vars, args)
     }
 
     pub fn apply_message(&self, args: &[ARichFormula<'bump>]) -> ARichFormula<'bump> {
         self.assert_valid().unwrap();
-        let vars: Vec<_> = (1..=self.arity()).collect_vec();
+        let vars: Vec<_> = (0..self.arity()).collect_vec();
         self.message().clone().apply_substitution(vars, args)
     }
 

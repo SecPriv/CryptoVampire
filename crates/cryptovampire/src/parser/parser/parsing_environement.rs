@@ -78,32 +78,18 @@ pub struct Environement<'bump, 'str, S> {
 
     /// Whether the current run uses the parsed `lemma`s (i.e. `-l`/`--lemmas`
     /// was passed and `--ignore-lemmas` was not).
-    use_lemmas: bool,
+    pub use_lemmas: bool,
     /// Whether `--exec-pred` is enabled, i.e. whether the `exec_pred` builtin
     /// gets its definitional axiom.
-    with_exec_pred: bool,
+    pub with_exec_pred: bool,
     /// Whether the "`exec_pred` used without `--exec-pred`" warning was already
     /// emitted for this parse (so we only print it once).
-    warned_exec_pred: AtomicBool,
+    pub warned_exec_pred: AtomicBool,
 }
 
 impl<'bump, 'str, S> MaybeInvalid for Environement<'bump, 'str, S> {
     fn is_valid(&self) -> bool {
-        let Environement {
-            name_caster_collection: _,
-            container: _,
-            sort_hash: _,
-            macro_hash: _,
-            evaluator: _,
-            functions,
-            used_name: _,
-            allow_shadowing: _,
-            use_lemmas: _,
-            with_exec_pred: _,
-            warned_exec_pred: _,
-        } = self;
-
-        functions.values().all(|v| match v {
+        self.functions.values().all(|v| match v {
             FunctionCache::Function(function) => function.is_valid(),
             FunctionCache::Step(StepCache { function, step, .. }) => {
                 function.is_valid() && step.is_valid()

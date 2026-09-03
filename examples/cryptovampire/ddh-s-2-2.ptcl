@@ -57,11 +57,11 @@ step S2(j:index)
 
 let challenge!(i:index, j:index) = (gp!(j) == mexp(g, a(i)))
 step Schall_succ(i:index, j:index)
-    {(cond!(S2(j)) && challenge!(i, j))}
+    {challenge!(i, j)}
     { mexp(g, k(i,j))} /* here it changed */
 
 step Schall_fail(j:index)
-    {(cond!(S2(j)) && not(exists (i:index) {challenge!(i, j)}))}
+    {not(exists (i:index) {challenge!(i, j)})}
     { ko }
 
 order forall (j:index) { S1(j) < S2(j)}
@@ -81,18 +81,12 @@ assert
         )
     }
 
-let exec!(t:Step) = (
-    happens(t) &&
-    forall (i:index) {((lt(P1(i), t) || (P1(i) == t)) => cond!(P1(i)))} &&
-    forall (i:index) {((lt(P2(i), t) || (P2(i) == t)) => cond!(P2(i)))} &&
-    forall (i:index) {((lt(S1(i), t) || (S1(i) == t)) => cond!(S1(i)))} &&
-    forall (i:index) {((lt(S2(i), t) || (S2(i) == t)) => cond!(S2(i)))} &&
-    forall (i:index, j:index)
-        {((lt(Schall_succ(i, j), t) || (Schall_succ(i, j) == t)) => cond!(Schall_succ(i, j)))} &&
-    forall (i:index) {((lt(Schall_fail(i), t) || (Schall_fail(i) == t)) => cond!(Schall_fail(i)))} 
-)
+
+lemma forall (j:index) {( /* sure, why do I need this when I didn't before ^^' */
+    exec_pred(Schall_fail(j)) => cond!(S2(j))
+)}
 
 /* S_charac */
 query forall (j:index) {(
-        (exec!(pred(Schall_fail(j))) && cond!(Schall_fail(j))) <=> false
+        (exec_pred(Schall_fail(j)) && cond!(Schall_fail(j))) <=> false
 )}

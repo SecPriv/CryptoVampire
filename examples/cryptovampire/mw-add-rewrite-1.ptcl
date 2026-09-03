@@ -1,40 +1,15 @@
 /*
-PROOF MODEL (named exec): same add-rewrite + guarded-bridge lemma as
-mw-add-rewrite-plain.ptcl, but the exec guard is a NAMED symbol
-    fun pred_exec(Step):Bool + definitional assert (forall t. pred_exec(t) <=> ...)
-hand-written in this file instead of the in-lined pred_exec! macro. Naming
-was the original "trick"; it turns out NOT to be required (the plain version
-proves identically) — kept here as a variant for comparison.
+PROOF MODEL (tool-provided exec_pred): same add-rewrite + guarded-bridge
+lemma as the plain/named versions, but the exec guard is the TOOL-PRODUCED
+named symbol `exec_pred` (cryptovampire --exec-pred). No pred_exec! / pred_exec
+macro or fun is defined in this file: the tool seeds `exec_pred : Step -> Bool`
+into the parser namespace and derives its definitional axiom from the
+protocol's own steps. Preferred way to get a named exec predicate.
 
 HOW TO RUN:
-    cryptovampire mw-add-rewrite-named-exec.ptcl --pairwise-find-fa auto -l --timeout 15
-  No --exec-pred: this file declares its own `pred_exec`. Same solver / retry
-  notes as the plain version.
-*/
-/*
-Faithful base-cryptovampire rendering of examples/cryptovampire2/mw.scm's main
-add-rewrite ("lemma", mw.scm lines 133-136):
-
-    (add-rewrite pbl (rw.new "lemma" (list r p)
-      (m_ite (macro_exec (r2 r) p) (mk-fdst1 (macro_input (r2 r) p) r p) mempty)
-      (m_ite (macro_exec (r2 r) p) (mk-fdst2 r p) mempty)))
-
-for the two-index protocol (p2): mk!(i,t) = key(i,t),  mid!(i,t) = id(i,t).
-Protocol modeled after examples/cryptovampire/mw-2-ra.ptcl (canonical).
-
-The two mw.scm statement fixes found earlier are reflected:
-  (1) the LHS uses the reader's OWN index r (mk-fdst1 ... r p) -- mw.scm
-      originally had a stray free `j`; now fixed in mw.scm too;
-  (2) mk-fdst2's search carries the honest-transcript conjunct
-      input(tag(i,t)) == msg!(reader1(r)) -- this is Squirrel's
-      wa_R1_R2/wa_R1 `output@R(r) = input@T(i,t)`; without it the idealized
-      search cannot identify the honest tag.
-
-NOTE on the index-sensitive bits: within each find the SAME bound index is
-used in the condition and the then (so there is no inner k-vs-t mismatch);
-the add-rewrite asserts the two finds agree. Base cryptovampire can prove the
-weak existential bridge (conclusion! <=> premise!) but, as found, does NOT yet
-close the index-precise version this query states within budget.
+    cryptovampire mw-add-rewrite-execpred.ptcl --exec-pred --pairwise-find-fa auto -l --timeout 15
+  Requires BOTH --exec-pred (the exec_pred symbol + definition) and
+  --pairwise-find-fa -l. Same solver / retry notes as the other versions.
 */
 type index;
 
@@ -56,12 +31,12 @@ fun tag2:Message
 fun nt(index, index): Name
 fun nr(index): Name
 
-/* two-index key and id (protocol p2) */
-fun key(index, index):Name
-let mkey!(i:index, k:index) = key(i, k)
+/* one-index key and id (protocol p1) */
+fun key(index):Name
+let mkey!(i:index, k:index) = key(i)
 
-fun id(index, index):Message
-let mid!(i:index, k:index) = id(i, k)
+fun id(index):Message
+let mid!(i:index, k:index) = id(i)
 
 /* reader's decrypt-style search condition (mk-fdst1), in verify-form so that
    the euf-cma axioms engage (scm writes mhash(...) == mxor(..) directly). */
@@ -127,20 +102,6 @@ assert forall (m:Message, m':Message) {(
 order forall (j:index)
     reader1(j) < reader2(j)
 
-/* base cryptovampire doesn't natively support `exec` in protocol/query definition,
-   hence we redefine it here (see the feldhofer/ddh examples). */
-fun pred_exec(Step):Bool
-
-assert forall (t:Step) {(
-    pred_exec(t)
-    <=>
-    (
-        s_happens(t) &&
-        forall (i:index, k:index) {(s_lt(tag(i,k), t) => cond!(tag(i,k)))} &&
-        forall (j:index) {(s_lt(reader1(j), t) => cond!(reader1(j)))} &&
-        forall (j:index) {(s_lt(reader2(j), t) => cond!(reader2(j)))}
-    )
-)}
 
 /* mk-fdst2: the idealized/honest find. Search condition = the honest
    transcript: input(tag)==msg(r1) [fix 2], sel1/sel2 match with the received
@@ -151,7 +112,7 @@ let fdst2!(r:index) =
         (input(tag(i,t)) == msg!(reader1(r)))
         && (sel1of2(input(reader2(r))) == sel1of2(msg!(tag(i,t))))
         && (sel2of2(input(reader2(r))) == sel2of2(msg!(tag(i,t))))
-        && pred_exec(reader2(r))
+        && exec_pred(reader2(r))
         && s_lt(reader1(r), tag(i,t))
         && s_lt(tag(i,t), reader2(r))
         ) }
@@ -160,7 +121,7 @@ let fdst2!(r:index) =
             hash(tpl(tpl(nr(r), sel1of2(input(reader2(r)))), tag2), mkey!(i, t))) }
         else { ko }
 
-lemma forall(r:index,i:index,t:index) {(pred_exec(reader2(r)) => (
+lemma forall(r:index,i:index,t:index) {(exec_pred(reader2(r)) => (
     
         verify(
             m_xor(id(i, t), sel2of2(input(reader2(r)))),
@@ -179,7 +140,7 @@ lemma forall(r:index,i:index,t:index) {(pred_exec(reader2(r)) => (
         (sel2of2(msg!(tag(i, t))) == sel2of2(input(reader2(r)))) &&
         lt(reader1(r),tag(i, t)) &&
         (msg!(reader1(r)) == input(tag(i, t)))
-        && pred_exec(reader2(r))
+        && exec_pred(reader2(r))
     )
 
 ))}
@@ -187,9 +148,9 @@ lemma forall(r:index,i:index,t:index) {(pred_exec(reader2(r)) => (
 /* The add-rewrite: at an executing reader2(r), the reader's output (mk-fdst1)
    equals the idealized output (mk-fdst2). */
 query forall (r:index) {(
-    if (pred_exec(reader2(r)) && cond!(reader2(r))) { msg!(reader2(r)) } else {empty}
+    if (exec_pred(reader2(r)) && cond!(reader2(r))) { msg!(reader2(r)) } else {empty}
     ==
-    if (pred_exec(reader2(r)) && cond!(reader2(r))) { fdst2!(r) } else {empty}
+    if (exec_pred(reader2(r)) && cond!(reader2(r))) { fdst2!(r) } else {empty}
 )}
 
 assert-crypto euf-cma hash verify;

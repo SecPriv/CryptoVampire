@@ -43,6 +43,8 @@ impl<'str> ASTLocation<'str> {
     ///
     /// Useful for non-fatal warnings that should point back into the parsed
     /// input without aborting the run.
+    /// 
+    /// *NB*: meh slop but it works
     pub fn render_with(&self, msg: &str) -> String {
         let variant: pest::error::ErrorVariant<crate::parser::Rule> =
             pest::error::ErrorVariant::CustomError {
