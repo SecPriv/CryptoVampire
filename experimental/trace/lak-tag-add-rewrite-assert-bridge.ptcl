@@ -14,8 +14,8 @@ exercise the rest of the pipeline, but it is NOT a sound proof of the
 add-rewrite.
 
 The correct, sound proof lives in examples/cryptovampire/:
-    * lak-tag-add-rewrite-plain.ptcl        (exec guard via the exec_pred! macro)
-    * lak-tag-add-rewrite-named-exec.ptcl   (exec guard via a hand-written epred)
+    * lak-tag-add-rewrite-plain.ptcl        (exec guard via the pred_exec! macro)
+    * lak-tag-add-rewrite-named-exec.ptcl   (exec guard via a hand-written pred_exec)
     * lak-tag-add-rewrite-execpred.ptcl     (exec guard via the --exec-pred tool symbol)
 there the bridge is a LEMMA whose exec-guard makes it provable, run as
     cryptovampire <file> --pairwise-find-fa auto -l --timeout 15
@@ -135,7 +135,7 @@ order forall (j:index)
 
 /* base cryptovampire doesn't natively support `exec` in protocol/query definition,
    hence we redefine it here (see the feldhofer/ddh examples). */
-let exec_pred!(t:Step) = (
+let pred_exec!(t:Step) = (
     s_happens(t) &&
     forall (i:index, k:index) {(s_lt(tag(i,k), t) => cond!(tag(i,k)))} &&
     forall (j:index) {(s_lt(reader1(j), t) => cond!(reader1(j)))} &&
@@ -147,7 +147,7 @@ let honest!(i:index, j:index, k:index) = (
     (input(tag(i,k)) == msg(reader1(j)))
     && (sel1of2(msg!(tag(i,k))) == sel1of2(input(reader2(j))))
     && (sel2of2(msg!(tag(i,k))) == sel2of2(input(reader2(j))))
-    && exec_pred!(reader2(j))
+    && pred_exec!(reader2(j))
     && s_lt(reader1(j), tag(i,k))
     && s_lt(tag(i,k), reader2(j))
 )
@@ -169,7 +169,7 @@ let fdst2!(j:index) =
         (input(tag(i,k)) == msg(reader1(j)))
         && (sel1of2(input(reader2(j))) == sel1of2(msg!(tag(i,k))))
         && (sel2of2(input(reader2(j))) == sel2of2(msg!(tag(i,k))))
-        && exec_pred!(reader2(j))
+        && pred_exec!(reader2(j))
         && s_lt(reader1(j), tag(i,k))
         && s_lt(tag(i,k), reader2(j))
         ) }
@@ -181,9 +181,9 @@ let fdst2!(j:index) =
 /* The add-rewrite: at an executing reader2(j), the reader's output (mk-fdst1)
    equals the idealized output (mk-fdst2). */
 query forall (j:index) {(
-    if (exec_pred!(reader2(j)) && cond!(reader2(j))) { msg!(reader2(j)) } else {empty}
+    if (pred_exec!(reader2(j)) && cond!(reader2(j))) { msg!(reader2(j)) } else {empty}
     ==
-    if (exec_pred!(reader2(j)) && cond!(reader2(j))) { fdst2!(j) } else {empty}
+    if (pred_exec!(reader2(j)) && cond!(reader2(j))) { fdst2!(j) } else {empty}
 )}
 
 assert-crypto euf-cma hash verify;

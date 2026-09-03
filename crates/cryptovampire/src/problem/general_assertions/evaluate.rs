@@ -434,7 +434,7 @@ fn eval_condition<'bump>(
 /// Push `evaluate_cond` down through a find-condition tree, turning the opaque
 /// `ta$*` combinator soup (`ta$and`, `ta$or`, `ta$not`, `ta$implies`, `ta$=`,
 /// `ta$true`/`ta$false`) into plain Boolean formulas, and expanding
-/// `exec_pred!`-style parameterized `∀ Step`-conditions (term-algebra `Forall`
+/// `pred_exec!`-style parameterized `∀ Step`-conditions (term-algebra `Forall`
 /// functions such as `ta$forall$2`/`3`/`4`) into literal `forall`s. The atomic
 /// `s_lt` / `s_happens` leaves are kept wrapped (`evaluate_cond (s_lt …)` /
 /// `evaluate_cond (s_happens …)`), and anything not structurally handled is
@@ -443,7 +443,7 @@ fn eval_condition<'bump>(
 /// NB: `crate::problem::general_assertions::assertion_preprocessor::propagate_evaluate`
 /// already does most of this, but its quantifier branch assumes the term-
 /// algebra quantifier's *bound* variables line up with the function's
-/// application arguments, which is not the case for the `exec_pred!`-style
+/// application arguments, which is not the case for the `pred_exec!`-style
 /// `ta$forall$N` (their `∀`-indices live in `bound_variables`, the `Step`
 /// parameter in `free_variables`), so it panics — hence this self-contained
 /// version used only for the pairwise-fa clauses.
@@ -455,7 +455,7 @@ fn eval_condition<'bump>(
 /// *weakens* `c1`/`c2` in arbitrary SMT models. In the honest model the
 /// equivalence `evaluate_cond(ta$forall$N X) ↔ ∀…` holds (the fold RHS is the
 /// intended reading) and matches how the query/lemmas already render the same
-/// `exec_pred!` block, so it restores — not corrupts — the honest meaning; the
+/// `pred_exec!` block, so it restores — not corrupts — the honest meaning; the
 /// widening happens only in non-honest models, consistent with this being a
 /// documented trusted strengthening.
 fn push_down_condition<'bump>(

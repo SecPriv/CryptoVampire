@@ -133,7 +133,7 @@ assert-crypto nonce;
             exists (j:index) {(msnd(mfst(input(Pchall2(i)))) == mexp(g, b(j)))})
 )}*/
 
-let exec_pred!(t:Step) = (
+let pred_exec!(t:Step) = (
     happens(t) &&
     forall (i:index) {(lt(Pchall1(i), t) => cond!(Pchall1(i)))} &&
     forall (i:index) {(lt(Pchall2(i), t) => cond!(Pchall2(i)))} &&
@@ -145,5 +145,5 @@ let exec_pred!(t:Step) = (
 
 
 query forall (j:index, i:index) {(
-     (exec_pred!(Pchall3bis(i)) && cond!(Pchall3bis(i))) <=> false
+     (pred_exec!(Pchall3bis(i)) && cond!(Pchall3bis(i))) <=> false
 )}
