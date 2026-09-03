@@ -52,6 +52,10 @@ pub struct Args {
     #[arg(long)]
     pub pairwise_find_fa: bool,
 
+    /// declare a named `exec_pred` symbol + its definitional axiom from the protocol steps
+    #[arg(long)]
+    pub exec_pred: bool,
+
     /// remove the bitstring functions, evaluation must then be handeled by something else
     #[arg(long)]
     pub no_bitstring: bool,
@@ -294,6 +298,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             no_preprocessing,
             legacy_evaluate,
             pairwise_find_fa,
+            exec_pred,
             no_bitstring,
             symbolic,
             command,
@@ -315,6 +320,7 @@ impl<'bump> IntoWith<Environement<'bump>, &'bump ScopedContainer<'bump>> for &Ar
             // !pure_smt => Flags::ASSERT_NOT,
             *legacy_evaluate => Flags::LEGACY_EVALUATE,
             *pairwise_find_fa => Flags::PAIRWISE_FIND_FA,
+            *exec_pred => Flags::EXEC_PRED,
             *skolemnise => Flags::SKOLEMNISE,
             *no_bitstring && realm.is_symbolic() => Flags::NO_BITSTRING,
             // *ignore_lemmas => Flags::IGNORE_LEMMAS

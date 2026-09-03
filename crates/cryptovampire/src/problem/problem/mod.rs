@@ -12,7 +12,7 @@ use utils::implvec;
 
 use super::crypto_assumptions::CryptoAssumption;
 use super::general_assertions::assertion_preprocessor::propagate_evaluate;
-use super::general_assertions::{self, order};
+use super::general_assertions::{self, order, exec};
 use super::generator::Generator;
 use super::protocol::Protocol;
 use crate::container::ScopedContainer;
@@ -212,6 +212,10 @@ impl<'bump> Generator<'bump> for Problem<'bump> {
 
         trace!("[G]\t- ordering...");
         order::generate(assertions, declarations, env, self);
+        trace!("[G]\t\t[DONE]");
+
+        trace!("[G]\t- exec_pred...");
+        exec::generate(assertions, declarations, env, self);
         trace!("[G]\t\t[DONE]");
 
         trace!("[G]\t- evaluate...");
