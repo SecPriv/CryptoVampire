@@ -75,6 +75,8 @@ where
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
             ast,
             env.are_lemmas_ignored(),
+            env.use_lemmas(),
+            env.exec_pred(),
             env.allow_shadowing(),
         )?;
 

@@ -37,6 +37,28 @@ impl<'str> ASTLocation<'str> {
         }
     }
 
+    /// Render `msg` the way a parsing error would be rendered (via the pest
+    /// [`pest::error::Error`] display): a leading message, a `--> line:col`
+    /// line, the offending source line and carets.
+    ///
+    /// Useful for non-fatal warnings that should point back into the parsed
+    /// input without aborting the run.
+    pub fn render_with(&self, msg: &str) -> String {
+        let variant: pest::error::ErrorVariant<crate::parser::Rule> =
+            pest::error::ErrorVariant::CustomError {
+                message: msg.to_string(),
+            };
+        match self.0.as_ref() {
+            InnerAstLocationHelper::Span(span) => {
+                pest::error::Error::new_from_span(variant, *span).to_string()
+            }
+            InnerAstLocationHelper::Position(position) => {
+                pest::error::Error::new_from_pos(variant, *position).to_string()
+            }
+            InnerAstLocationHelper::Nothing => msg.to_string(),
+        }
+    }
+
     pub fn all(input: &'str str) -> Self {
         pest::Position::new(input, 0).unwrap().into()
     }

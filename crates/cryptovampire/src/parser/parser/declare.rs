@@ -83,6 +83,7 @@ where
 {
     let mut did_initilise_init = false;
     let mut query = Ok(None);
+    let use_lemmas = env.use_lemmas();
     ast.into_iter()
         .filter_map(|ast| {
             if query.is_err() {
@@ -99,7 +100,16 @@ where
                 AST::Assert(a) => {
                     match Arc::as_ref(a) {
                         ast::Assert::Assertion(a) => assertions.extend([a]),
-                        ast::Assert::Lemma(l) => lemmas.extend([l]),
+                        ast::Assert::Lemma(l) => {
+                            if !use_lemmas {
+                                eprintln!("warning: {}", l.span.render_with(
+                                    "the file declares lemma(s) but they will not be used; pass \
+                                     `-l`/`--lemmas` to activate them, or `--ignore-lemmas` to \
+                                     explicitly drop them and silence this warning."
+                                ));
+                            }
+                            lemmas.extend([l])
+                        }
                         ast::Assert::Query(q) => match query {
                             Err(_) => unreachable!("should be caught before"),
                             Ok(inner_query) => {

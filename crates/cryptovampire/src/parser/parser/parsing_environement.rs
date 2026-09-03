@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::collections::VecDeque;
 use std::ops::Deref;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
@@ -74,6 +75,16 @@ pub struct Environement<'bump, 'str, S> {
 
     pub used_name: HashSet<String>,
     pub allow_shadowing: bool,
+
+    /// Whether the current run uses the parsed `lemma`s (i.e. `-l`/`--lemmas`
+    /// was passed and `--ignore-lemmas` was not).
+    use_lemmas: bool,
+    /// Whether `--exec-pred` is enabled, i.e. whether the `exec_pred` builtin
+    /// gets its definitional axiom.
+    with_exec_pred: bool,
+    /// Whether the "`exec_pred` used without `--exec-pred`" warning was already
+    /// emitted for this parse (so we only print it once).
+    warned_exec_pred: AtomicBool,
 }
 
 impl<'bump, 'str, S> MaybeInvalid for Environement<'bump, 'str, S> {
@@ -87,6 +98,9 @@ impl<'bump, 'str, S> MaybeInvalid for Environement<'bump, 'str, S> {
             functions,
             used_name: _,
             allow_shadowing: _,
+            use_lemmas: _,
+            with_exec_pred: _,
+            warned_exec_pred: _,
         } = self;
 
         functions.values().all(|v| match v {
@@ -108,6 +122,8 @@ impl<'bump, 'str, S> Environement<'bump, 'str, S> {
         function_hash: implvec!(Function<'bump>),
         extra_names: implvec!(String),
         allow_shadowing: bool,
+        use_lemmas: bool,
+        with_exec_pred: bool,
     ) -> Self {
         let sort_hash = sort_hash
             .into_iter()
@@ -130,6 +146,9 @@ impl<'bump, 'str, S> Environement<'bump, 'str, S> {
             functions: function_hash,
             used_name: names,
             allow_shadowing,
+            use_lemmas,
+            with_exec_pred,
+            warned_exec_pred: AtomicBool::new(false),
         }
     }
 
@@ -139,6 +158,16 @@ impl<'bump, 'str, S> Environement<'bump, 'str, S> {
 
     pub fn contains_name_with_var<'b>(&self, name: &'b str, vars: implvec!(&'b str)) -> bool {
         self.contains_name(name) || vars.into_iter().contains(&name)
+    }
+
+    /// Whether the `lemma`s parsed from the file are going to be used by the run.
+    pub fn use_lemmas(&self) -> bool {
+        self.use_lemmas
+    }
+
+    /// Whether `--exec-pred` was enabled (giving `exec_pred` its definitional axiom).
+    pub fn with_exec_pred(&self) -> bool {
+        self.with_exec_pred
     }
 
     pub fn container_macro_name(&self, name: &str) -> bool {
@@ -217,11 +246,26 @@ pub fn get_sort<'str, 'bump, S, L: LocateHelper>(
 }
 
 /// Find the [Function] in already declared in [Environement::functions]
-pub fn get_function<'b, 'a, 'bump, L: LocateHelper, S>(
+///
+/// Also emits a non-fatal warning (at most once per parse) when the reserved
+/// `exec_pred` symbol is resolved while `--exec-pred` is **not** enabled, since
+/// `exec_pred` will then be treated as an uninterpreted function instead of
+/// getting its definitional axiom.
+pub fn get_function<'b, 'a, 'bump, S>(
     env: &'b Environement<'bump, 'a, S>,
-    span: &L,
+    span: &ASTLocation<'a>,
     str: implderef!(str),
 ) -> crate::Result<&'b FunctionCache<'a, 'bump, S>> {
+    if !env.with_exec_pred()
+        && str.deref() == "exec_pred"
+        && !env.warned_exec_pred.swap(true, Ordering::Relaxed)
+    {
+        eprintln!("warning: {}", span.render_with(
+            "`exec_pred` is used but `--exec-pred` is not enabled; `exec_pred` will be left \
+             as an uninterpreted function (its definitional axiom is not emitted).\n\
+             \tRun with `--exec-pred` if you meant the tool-provided predicate."
+        ));
+    }
     env.functions
         .get(Deref::deref(&str))
         .ok_or_else(|| ParsingError::undefined_function(&str))
@@ -229,11 +273,11 @@ pub fn get_function<'b, 'a, 'bump, L: LocateHelper, S>(
     // .map(|s| *s)
 }
 
-pub fn get_function_mow<'b, 'a, 'bump, L: LocateHelper, S>(
+pub fn get_function_mow<'b, 'a, 'bump, S>(
     content: &S,
     state: &impl KnowsRealm,
     env: &'b Environement<'bump, 'a, S>,
-    span: &L,
+    span: &ASTLocation<'a>,
 ) -> crate::Result<MOw<'b, FunctionCache<'a, 'bump, S>>>
 where
     S: Borrow<str>,
@@ -262,6 +306,7 @@ impl<'a, 'bump, S> KnowsRealm for Environement<'bump, 'a, S> {
 }
 
 /// Create a problem from a [ast::ASTList]
+#[allow(clippy::too_many_arguments)] // parser entry point, driven by CLI-converted flags
 pub fn parse_pbl_from_ast<'bump, 'str, S>(
     container: &'bump ScopedContainer<'bump>,
     sort_hash: implvec!(Sort<'bump>),
@@ -269,6 +314,8 @@ pub fn parse_pbl_from_ast<'bump, 'str, S>(
     extra_names: implvec!(String),
     ast: ASTList<'str, S>,
     ignore_lemmas: bool,
+    use_lemmas: bool,
+    with_exec_pred: bool,
     allow_shadowing: bool,
 ) -> crate::Result<Problem<'bump>>
 where
@@ -285,6 +332,8 @@ where
         function_hash,
         extra_names,
         allow_shadowing,
+        use_lemmas,
+        with_exec_pred,
     );
     prbl_from_ast(env, &ast, pbl_builder, ignore_lemmas, container)
 }
