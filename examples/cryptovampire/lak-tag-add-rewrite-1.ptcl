@@ -109,17 +109,15 @@ let fdst2!(j:index) =
             mkey!(i, k)) }
         else { ko }
 
-/* Guarded bridge: at an executing reader2(j), the reader's decrypt-check
-   (mk-fdst1's condition) is equivalent to the honest transcript (fdst2's
-   condition), spelled identically (s_lt + msg!) so it discharges the
-   pairwise-fa premise directly. */
 /* Guarded bridge, one-index (p1): `key(i)` depends only on the session index
    `i`; the honest transcript's *row* index `k` is invisible on the decrypt
-   side (the `m_condition_fst!` macro drops it), so the lemma must quantify it
-   existentially (the published row that matches reader1's nonce):
-   `forall j i. exec_pred(reader2 j) => (decrypt(j,i) <=> exists k. honest(j,i,k))`.
-   Spelling the RHS with `s_lt` exactly matches the `fdst2` search condition so
-   it discharges the pairwise-find-fa premise directly. */
+   side (the `m_condition_fst!` macro drops it). Split into the two directed
+   clauses that mirror the pairwise-find-fa bridge ("fa pairs") exactly:
+     forward  forall j i.    exec_pred(reader2 j) => (decrypt(j,i) => exists k. honest)
+     backward forall j i k.  exec_pred(reader2 j) => (honest => decrypt(j,i))
+   with `honest` the fdst2 search condition spelled with `s_lt`, term-for-term
+   equal to `fdst2!` (except the macro-dropped row index), so each clause
+   discharges its fa half. */
 lemma forall (j:index, i:index) {(
     exec_pred(reader2(j))
     =>
@@ -135,7 +133,7 @@ lemma forall (j:index, i:index) {(
             ),
             key(i)
         )
-        <=>
+        =>
         exists (k:index) {(
             (input(tag(i,k)) == msg!(reader1(j)))
             && (sel1of2(input(reader2(j))) == sel1of2(msg!(tag(i,k))))
@@ -144,6 +142,33 @@ lemma forall (j:index, i:index) {(
             && s_lt(reader1(j), tag(i,k))
             && s_lt(tag(i,k), reader2(j))
         )}
+    )
+)}
+
+lemma forall (j:index, i:index, k:index) {(
+    exec_pred(reader2(j))
+    =>
+    (
+        (
+            (input(tag(i,k)) == msg!(reader1(j)))
+            && (sel1of2(input(reader2(j))) == sel1of2(msg!(tag(i,k))))
+            && (sel2of2(input(reader2(j))) == sel2of2(msg!(tag(i,k))))
+            && exec_pred(reader2(j))
+            && s_lt(reader1(j), tag(i,k))
+            && s_lt(tag(i,k), reader2(j))
+        )
+        =>
+        verify(
+            sel2of2(input(reader2(j))),
+            tpl(
+                tpl(
+                    nr(j),
+                    sel1of2(input(reader2(j)))
+                ),
+                tag1
+            ),
+            key(i)
+        )
     )
 )}
 /* The add-rewrite: at an executing reader2(j), the reader's output (mk-fdst1)
