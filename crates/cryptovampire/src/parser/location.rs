@@ -187,8 +187,11 @@ impl Locate for PestLocation {
 
 impl<'str> From<pest::Span<'str>> for PestLocation {
     fn from(span: pest::Span<'str>) -> Self {
+        // NB: `start`/`end` are offsets into the *whole* input, so we must
+        // store the whole input (not `span.as_str()`, which is only the
+        // matched fragment) for `pest::Span::new` in `location_fmt` to work.
         PestLocation {
-            str: span.as_str().into(),
+            str: span.get_input().into(),
             kind: PestKind::Span {
                 start: span.start(),
                 end: span.end(),
@@ -200,7 +203,7 @@ impl<'str> From<pest::Span<'str>> for PestLocation {
 impl<'str> From<pest::Position<'str>> for PestLocation {
     fn from(pos: pest::Position<'str>) -> Self {
         PestLocation {
-            str: pos.span(&pos).as_str().into(),
+            str: pos.span(&pos).get_input().into(),
             kind: PestKind::Position { pos: pos.pos() },
         }
     }

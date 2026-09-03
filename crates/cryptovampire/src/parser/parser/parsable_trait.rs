@@ -480,7 +480,13 @@ where
     let signature = function.signature();
     let mut formula_realm = signature.realm();
 
-    // parse further
+    // parse further.
+    // NB: `signature.args().zip(provided)` truncates to the shorter list, so
+    // providing *more* args than the signature declares would silently drop
+    // them -- check for that below (the too-many-arguments error) instead of
+    // quietly continuing with corrupted semantics.
+    let provided_args: Vec<_> = args.into_iter().collect();
+    let n_provided = provided_args.len();
     let n_args: Result<Vec<_>, _> = {
         // propagate the right state if it changed
         let state = match &formula_realm {
@@ -490,13 +496,27 @@ where
         signature
             .args()
             .into_iter()
-            .zip(args)
+            .zip(&provided_args)
             .map(|(es, t)| t.parse(env, bvars, &state, Some(es)).debug_continue())
             .collect()
     };
     let n_args = n_args?;
 
     // check arity
+    if n_provided > n_args.len() {
+        // the zip above truncated the argument list to the declared arity,
+        // silently discarding the extra ones -- usually a model bug (e.g.
+        // feeding `id(i, t)` to a one-index `id`), so reject it loudly.
+        let range = signature.args_size();
+        bail_at!(
+            span,
+            "too many arguments: got {}, {} extra argument(s) would be dropped \
+             (declared arity is [{}])",
+            n_provided,
+            n_provided - n_args.len(),
+            range.end()
+        )
+    }
     if !signature.args_size().contains(&n_args.len().into()) {
         let range = signature.args_size();
         bail_at!(

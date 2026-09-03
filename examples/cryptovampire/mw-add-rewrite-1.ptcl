@@ -121,29 +121,37 @@ let fdst2!(r:index) =
             hash(tpl(tpl(nr(r), sel1of2(input(reader2(r)))), tag2), mkey!(i, t))) }
         else { ko }
 
-lemma forall(r:index,i:index,t:index) {(exec_pred(reader2(r)) => (
-    
+/* Guarded bridge, one-index (p1): here `id`/`key` depend only on the session
+   index `i`, so the honest transcript's *row* index `t` is invisible on the
+   decrypt side. The lemma must therefore quantify it existentially (the
+   published row that matches reader1's nonce):
+   `forall r i. exec_pred(reader2 r) => (decrypt(r,i) <=> exists t. honest(r,i,t))`.
+   Spelling the RHS with `s_lt` exactly matches the `fdst2` search condition so
+   it discharges the pairwise-find-fa premise directly. NB: never write
+   `id(i, t)` / `key(i, t)` (two arguments) against these one-index
+   declarations -- the parser reports "too many arguments" for that now. */
+lemma forall(r:index,i:index) {(exec_pred(reader2(r)) => (
         verify(
-            m_xor(id(i, t), sel2of2(input(reader2(r)))),
+            m_xor(id(i), sel2of2(input(reader2(r)))),
             tpl(
                 tpl(
                     nr(r),
                     sel1of2(input(reader2(r)))
                 ),
                 tag1
-            ), key(i, t)
+            ), key(i)
             )
      <=>
-    (
-        lt(tag(i, t), reader2(r)) &&
-        (sel1of2(msg!(tag(i, t))) == sel1of2(input(reader2(r)))) &&
-        (sel2of2(msg!(tag(i, t))) == sel2of2(input(reader2(r)))) &&
-        lt(reader1(r),tag(i, t)) &&
-        (msg!(reader1(r)) == input(tag(i, t)))
-        && exec_pred(reader2(r))
-    )
-
+    exists (t:index) {(
+        (input(tag(i,t)) == msg!(reader1(r))) &&
+        (sel1of2(input(reader2(r))) == sel1of2(msg!(tag(i,t)))) &&
+        (sel2of2(input(reader2(r))) == sel2of2(msg!(tag(i,t)))) &&
+        exec_pred(reader2(r)) &&
+        s_lt(reader1(r), tag(i,t)) &&
+        s_lt(tag(i,t), reader2(r))
+    )}
 ))}
+
 
 /* The add-rewrite: at an executing reader2(r), the reader's output (mk-fdst1)
    equals the idealized output (mk-fdst2). */
