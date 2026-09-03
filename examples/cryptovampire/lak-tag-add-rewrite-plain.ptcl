@@ -1,4 +1,16 @@
 /*
+PROOF MODEL (plain): proves the lak-tag add-rewrite (reader2's output ==
+idealised fdst2) against the euf-cma/uf-cma model, with NO trusted assert.
+Same recipe as the mw models: a guarded BRIDGE lemma
+    exec_pred!(reader2(j)) => (m_condition_fst!(i,j,k,input(reader2(j))) <=> honest fdst2 condition)
+whose honest side is spelled exactly like fdst2's search (s_lt(...), msg!),
+discharging the pairwise find-fa premise; --pairwise-find-fa; true query.
+
+HOW TO RUN:
+    cryptovampire lak-tag-add-rewrite-plain.ptcl --pairwise-find-fa auto -l --timeout 15
+  --pairwise-find-fa and -l required; rerun on "ran out of tries".
+*/
+/*
 Faithful base-cryptovampire rendering of examples/cryptovampire2/lak-tag.scm's
 main add-rewrite ("lemma", lines 102-105):
 

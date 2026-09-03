@@ -1,4 +1,17 @@
 /*
+PROOF MODEL (named exec): same add-rewrite + guarded-bridge lemma as
+mw-add-rewrite-plain.ptcl, but the exec guard is a NAMED symbol
+    fun epred(Step):Bool + definitional assert (forall t. epred(t) <=> ...)
+hand-written in this file instead of the in-lined exec_pred! macro. Naming
+was the original "trick"; it turns out NOT to be required (the plain version
+proves identically) — kept here as a variant for comparison.
+
+HOW TO RUN:
+    cryptovampire mw-add-rewrite-named-exec.ptcl --pairwise-find-fa auto -l --timeout 15
+  No --exec-pred: this file declares its own `epred`. Same solver / retry
+  notes as the plain version.
+*/
+/*
 Faithful base-cryptovampire rendering of examples/cryptovampire2/mw.scm's main
 add-rewrite ("lemma", mw.scm lines 133-136):
 

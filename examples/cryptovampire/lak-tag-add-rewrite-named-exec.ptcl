@@ -1,4 +1,14 @@
 /*
+PROOF MODEL (named exec): same lak-tag add-rewrite + guarded-bridge lemma as
+the plain version, but with a NAMED `epred(Step):Bool` (fun + definitional
+assert) hand-written in the file instead of the exec_pred! macro. Naming not
+required for the proof; kept as a variant.
+
+HOW TO RUN:
+    cryptovampire lak-tag-add-rewrite-named-exec.ptcl --pairwise-find-fa auto -l --timeout 15
+  (no --exec-pred; `epred` is declared in the file).
+*/
+/*
 Faithful base-cryptovampire rendering of examples/cryptovampire2/lak-tag.scm's
 main add-rewrite ("lemma", lines 102-105):
 

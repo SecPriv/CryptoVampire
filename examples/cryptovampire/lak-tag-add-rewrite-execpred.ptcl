@@ -1,4 +1,15 @@
 /*
+PROOF MODEL (tool-provided exec_pred): same lak-tag add-rewrite + guarded-
+bridge lemma, using the TOOL-PRODUCED `exec_pred` symbol (cryptovampire
+--exec-pred) instead of any hand-written exec_pred!/epred. Preferred way to
+get a named exec predicate.
+
+HOW TO RUN:
+    cryptovampire lak-tag-add-rewrite-execpred.ptcl --exec-pred --pairwise-find-fa auto -l --timeout 15
+  Requires BOTH --exec-pred and --pairwise-find-fa -l. Rerun on "ran out of
+  tries" (nondeterministic).
+*/
+/*
 Faithful base-cryptovampire rendering of examples/cryptovampire2/lak-tag.scm's
 main add-rewrite ("lemma", lines 102-105):
 

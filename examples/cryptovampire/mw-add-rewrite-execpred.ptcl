@@ -1,4 +1,17 @@
 /*
+PROOF MODEL (tool-provided exec_pred): same add-rewrite + guarded-bridge
+lemma as the plain/named versions, but the exec guard is the TOOL-PRODUCED
+named symbol `exec_pred` (cryptovampire --exec-pred). No exec_pred!/epred
+macro or fun is defined in this file: the tool seeds `exec_pred : Step -> Bool`
+into the parser namespace and derives its definitional axiom from the
+protocol's own steps. Preferred way to get a named exec predicate.
+
+HOW TO RUN:
+    cryptovampire mw-add-rewrite-execpred.ptcl --exec-pred --pairwise-find-fa auto -l --timeout 15
+  Requires BOTH --exec-pred (the exec_pred symbol + definition) and
+  --pairwise-find-fa -l. Same solver / retry notes as the other versions.
+*/
+/*
 Faithful base-cryptovampire rendering of examples/cryptovampire2/mw.scm's main
 add-rewrite ("lemma", mw.scm lines 133-136):
 

@@ -1,4 +1,27 @@
 /*
+PROOF MODEL (plain): proves the mw add-rewrite
+    msg!(reader2(r)) == fdst2!(r)   (at an executing reader2, guarded by ite)
+against the euf-cma/uf-cma model, with NO trusted assert.
+
+Recipe (this is what makes it provable):
+  1. a guarded BRIDGE lemma in the file,
+        exec_pred!(reader2(r)) => (mk-fdst1 condition  <=>  honest fdst2 condition)
+     with the honest side spelled exactly like the fdst2 search (s_lt(...),
+     msg!(...)) so the lemma discharges the pairwise find-fa premise;
+  2. the pairwise find-such-that FA axiom via --pairwise-find-fa;
+  3. the TRUE add-rewrite as the (only) query.
+exec_pred! / cond! / msg! here are cryptovampire step macros in-lined in the
+file (cond! = step guard, msg! = step output, exec_pred!(t) = "t executed and
+every step ordered strictly before t had its guard").
+Both protocol goals ("proven in 1 tries") come from one run.
+
+HOW TO RUN:
+    cryptovampire mw-add-rewrite-plain.ptcl --pairwise-find-fa auto -l --timeout 15
+  Requires an SMT solver (z3/cvc5/vampire). --pairwise-find-fa and -l (use
+  lemmas) are required. Provability is nondeterministic: on "ran out of
+  tries" simply rerun (usually 1 try).
+*/
+/*
 Faithful base-cryptovampire rendering of examples/cryptovampire2/mw.scm's main
 add-rewrite ("lemma", mw.scm lines 133-136):
 
