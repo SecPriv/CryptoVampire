@@ -42,9 +42,8 @@ use utils::traits::MyWriteTo;
 use crate::cli::Args;
 use crate::container::ScopedContainer;
 use crate::environement::environement::{Environement, SolverConfig};
-use crate::formula::function::Function;
 use crate::formula::function::builtin::BUILT_IN_FUNCTIONS;
-use crate::formula::sort::builtins::{BUILT_IN_SORTS, CONDITION, STEP};
+use crate::formula::sort::builtins::BUILT_IN_SORTS;
 use crate::problem::{PblIterator, Problem};
 use crate::runner::Runners;
 use crate::smt::{SMT_FILE_EXTENSION, SmtFile};
@@ -72,16 +71,7 @@ where
         let pbl = parse_pbl_from_ast(
             container,
             BUILT_IN_SORTS.iter().cloned(),
-            BUILT_IN_FUNCTIONS
-                .iter()
-                .cloned()
-                .chain(env.exec_pred().then(|| {
-                    // declare `exec_pred : Step -> Bool` (=Condition) so the
-                    // parser resolves `exec_pred(...)` references to this very
-                    // function; `exec::generate` then supplies the definition
-                    Function::new_user_term_algebra(container, "exec_pred", [*STEP], *CONDITION)
-                        .main
-                })),
+            BUILT_IN_FUNCTIONS.iter().cloned(),
             parser::USED_KEYWORDS.iter().map(|s| s.to_string()),
             ast,
             env.are_lemmas_ignored(),

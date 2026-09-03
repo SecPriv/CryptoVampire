@@ -423,7 +423,7 @@ fn pairwise_find_fa<'bump>(
 /// isomorphic* to the fa-axiom hypothesis clauses — the bridge the solver's
 /// E-matching can then see directly (instead of having to unfold the opaque
 /// `ta$and`/`ta$or`/`ta$=` trees hidden under a single `evaluate_cond`).
-fn eval_condition<'bump>(
+pub(crate) fn eval_condition<'bump>(
     pbl: &Problem<'bump>,
     formula: impl Into<ARichFormula<'bump>>,
 ) -> ARichFormula<'bump> {
