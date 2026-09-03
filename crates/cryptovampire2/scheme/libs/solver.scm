@@ -84,9 +84,9 @@
 
 (@doc (cv-help "add-rewrite" " (add-rewrite pbl rw) "
     "Adds a rewrite rule `rw` (built with `rw.new`) to the term rewriting of `pbl`."
-    "*Example:*" 
+    "*Example:*"
     "```scheme"
-    "(add-rewrite pbl (rw.new \"lemma\" (list i t j p) lhs rhs)) " 
+    "(add-rewrite pbl (rw.new \"lemma\" (list i t j p) lhs rhs)) "
     "```")
   (define (add-rewrite pbl rw) (pbl->add-rewrite pbl rw)))
 

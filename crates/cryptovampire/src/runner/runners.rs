@@ -68,11 +68,7 @@ impl Runners {
         }
         let n: u32 = ntimes.map(NonZeroU32::get).unwrap_or(u32::MAX);
 
-        let Runners {
-            vampire,
-            z3,
-            cvc5,
-        } = self;
+        let Runners { vampire, z3, cvc5 } = self;
 
         let v = vampire.map(|v| dyn_traits::RunnerAndDiscoverer::Discoverer(Box::new(v)));
         let z3 = z3.map(|v| dyn_traits::RunnerAndDiscoverer::Runner(Box::new(v)));

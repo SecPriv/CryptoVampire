@@ -121,7 +121,9 @@ impl<'a, 'bump> FormulaIterator<ARichFormula<'bump>> for ToNodeIterator<'a, 'bum
                             helper.push_result(to_node)
                         }
                         step_macro::Macro::Condition | step_macro::Macro::Message => {
-                            unreachable!("cond!/msg! are expanded at parse time and never appear here")
+                            unreachable!(
+                                "cond!/msg! are expanded at parse time and never appear here"
+                            )
                         }
                     };
                 }

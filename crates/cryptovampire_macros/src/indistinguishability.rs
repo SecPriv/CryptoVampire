@@ -143,7 +143,7 @@ impl MFunction {
     }
 }
 
-fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {   
+fn mk_steel<'a>(functions: implvec!(&'a MFunction)) -> proc_macro2::TokenStream {
     let imports = quote! {
         use ::steel::steel_vm::builtin::DocTemplate;
         use ::steel::steel_vm::builtin::BuiltInModule;

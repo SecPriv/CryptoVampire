@@ -1,7 +1,12 @@
 { ... }:
 {
   perSystem =
-    { pkgs, config, inputs', ... }:
+    {
+      pkgs,
+      config,
+      inputs',
+      ...
+    }:
     let
       mpython = pkgs.python311.withPackages (
         ps: with ps; [

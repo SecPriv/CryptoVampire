@@ -36,14 +36,14 @@
 
 (define-alias _mk pbl (Index Index Protocol) Nonce
   [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))
-  ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
+    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])
 (define mk (wrap-nonce _mk))
 
 (define empty-cond (lambda _ mtrue))
 
 (define (mk-fdst1 in j p)
   (let* [ (pt (lambda (i j) (dec in (mk i j p))))
-    (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j))))) ]
+      (nt (lambda (i j) (sel2of2 (sel2of2 (pt i j))))) ]
     (findst ((i Index) (k Index))
       (cand
         (eq (sel1of2 (pt i k)) tagT)
@@ -104,14 +104,14 @@
 
 (bind ((j Index) (t Time) (p Protocol))
   (let [ (tmp (findst ((i Index) (k Index))
-        (cand
-          (eq (sel1of2 (dec (macro_input (r2 j) p) (mk i k p))) tagT)
-          (eq (sel1of2 (sel2of2 (dec (macro_input (r2 j) p) (mk i k p)))) (nr j)))
-        (enc
-          (tuple tagR (tuple (nr j) (nt i j)))
-          (rr j)
-          (mk i k p))
-        ko)) ]
+          (cand
+            (eq (sel1of2 (dec (macro_input (r2 j) p) (mk i k p))) tagT)
+            (eq (sel1of2 (sel2of2 (dec (macro_input (r2 j) p) (mk i k p)))) (nr j)))
+          (enc
+            (tuple tagR (tuple (nr j) (nt i j)))
+            (rr j)
+            (mk i k p))
+          ko)) ]
     (begin
       (add-rewrite pbl (rw.new "lemma" (list t j p)
           (m_ite (macro_exec (r2 j) p) (mk-fdst1 (macro_input (r2 j) p) j p) mempty)

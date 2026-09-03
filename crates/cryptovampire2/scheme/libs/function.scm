@@ -183,18 +183,18 @@
     (if (Nonce? ret) (wrap-nonce f) f)))
 
 (register-syntax-doc! 'define-function
-    "Defines and binds a function named `name` in the problem `pbl`."
-    "The crypto modules it uses come first (in a list, optional); then the "
-    "argument sorts; then `->` and the output sort.  A bare sort declares a "
-    "nullary constant; a nonce output is wrapped so the result can be called "
-    "directly.  The bound identifier is a lifted callable/formula value."
-    ""
-    "**Usage:**"
-    "```scheme"
-    "(define-function mhash pbl (prf) (Bitstring Bitstring) -> Bitstring)"
-    "(define-function ok pbl Bitstring)              ; nullary constant"
-    "(define-function k1 pbl (Index) -> Nonce)       ; nonce -> wrapped"
-    "```")
+  "Defines and binds a function named `name` in the problem `pbl`."
+  "The crypto modules it uses come first (in a list, optional); then the "
+  "argument sorts; then `->` and the output sort.  A bare sort declares a "
+  "nullary constant; a nonce output is wrapped so the result can be called "
+  "directly.  The bound identifier is a lifted callable/formula value."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(define-function mhash pbl (prf) (Bitstring Bitstring) -> Bitstring)"
+  "(define-function ok pbl Bitstring)              ; nullary constant"
+  "(define-function k1 pbl (Index) -> Nonce)       ; nonce -> wrapped"
+  "```")
 
 (define-syntax define-function
   (syntax-rules (->)
@@ -224,13 +224,13 @@
 
 
 (register-syntax-doc! 'alias-rw
-    "Builds one rewrite used by `define-alias`, binding the given ids to fresh"
-    "variables of the given sorts."
-    ""
-    "**Usage:**"
-    "```scheme"
-    "(alias-rw ((i Index) (j Index)) ((unwrap-nonce k1) i) -> ...)"
-    "```")
+  "Builds one rewrite used by `define-alias`, binding the given ids to fresh"
+  "variables of the given sorts."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(alias-rw ((i Index) (j Index)) ((unwrap-nonce k1) i) -> ...)"
+  "```")
 
 (define-syntax alias-rw
   (syntax-rules (->)
@@ -241,17 +241,17 @@
           (list args ... res))) ]))
 
 (register-syntax-doc! 'define-alias
-    "Declares a function that is defined by rewriting into previously declared"
-    "functions (often per-protocol, or with `wrap-nonce`).  Each clause is a"
-    "`[ (alias-rw ...) ... ]` rewrite."
-    ""
-    "**Usage:**"
-    "```scheme"
-    "(define-alias _mk pbl (Index Index Protocol) Nonce"
-    "  [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))"
-    "    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])"
-    "(define mk (wrap-nonce _mk))"
-    "```")
+  "Declares a function that is defined by rewriting into previously declared"
+  "functions (often per-protocol, or with `wrap-nonce`).  Each clause is a"
+  "`[ (alias-rw ...) ... ]` rewrite."
+  ""
+  "**Usage:**"
+  "```scheme"
+  "(define-alias _mk pbl (Index Index Protocol) Nonce"
+  "  [ ([ (i Index) (j Index) ] (i j p1) -> ((unwrap-nonce k1) i))"
+  "    ([ (i Index) (j Index) ] (i j p2) -> ((unwrap-nonce k2) i j)) ])"
+  "(define mk (wrap-nonce _mk))"
+  "```")
 
 (define-syntax define-alias
   (syntax-rules (->)

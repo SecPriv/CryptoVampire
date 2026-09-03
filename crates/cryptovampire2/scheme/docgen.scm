@@ -57,7 +57,7 @@
 ;; the steel `@doc` table.  Returns #f when undocumented.
 (define (raw-doc f)
   (or (#%native-fn-ptr-doc->string f)
-      (#%function-ptr-table-get #%function-ptr-table f)))
+    (#%function-ptr-table-get #%function-ptr-table f)))
 
 ;; cv-help docs start with the bold title line (`` **`name`** ``); drop it since
 ;; the section headings already carry the name.
@@ -66,7 +66,7 @@
     (cond
       [(>= i n) s]
       [(char=? (string-ref s i) #\newline)
-       (if (= i (- n 1)) "" (substring s (+ i 1) n))]
+        (if (= i (- n 1)) "" (substring s (+ i 1) n))]
       [else (loop (+ i 1) n)])))
 
 ;; ---------------------------------------------------------------------------

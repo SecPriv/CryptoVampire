@@ -13,7 +13,8 @@ use crate::environement::environement::{Environement, Flags, SubtermFlags};
 use crate::error::{BaseContext, CVContext};
 use crate::runner::{RetCodeAndStdout, RunnerOut, exec_cmd};
 use crate::smt::SmtFile;
-use crate::{FromEnv, SmtDisplay, ensure};/// The [Runner] for `cvc5`.
+use crate::{FromEnv, SmtDisplay, ensure};
+/// The [Runner] for `cvc5`.
 ///
 /// Like `z3`, this is a *dumb* runner: we just dump a standard-compliant SMT
 /// file at it and read back `sat`/`unsat`/`unknown`. In particular we never

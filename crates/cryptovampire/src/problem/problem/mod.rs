@@ -12,7 +12,7 @@ use utils::implvec;
 
 use super::crypto_assumptions::CryptoAssumption;
 use super::general_assertions::assertion_preprocessor::propagate_evaluate;
-use super::general_assertions::{self, order, exec};
+use super::general_assertions::{self, exec, order};
 use super::generator::Generator;
 use super::protocol::Protocol;
 use crate::container::ScopedContainer;

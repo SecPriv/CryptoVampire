@@ -49,18 +49,18 @@ pub struct Args {
     pub legacy_evaluate: bool,
 
     /// experimental: emit the pairwise find-such-that FA axiom (trusted)
-    /// 
+    ///
     /// > Because `try find`s are the source of all evil.
-    /// 
+    ///
     /// This options enables a sound but slightly nasty axiom to mimick squirrel's `fa` tactic.
-    /// 
+    ///
     /// Quadratic in the number of `try find`.
     #[arg(long)]
     pub pairwise_find_fa: bool,
 
     /// declare a named `exec_pred` symbol + its definitional axiom from the protocol steps
-    /// 
-    /// Automatically generated `exec` macro for `exec(pred(t))`. 
+    ///
+    /// Automatically generated `exec` macro for `exec(pred(t))`.
     #[arg(long)]
     pub exec_pred: bool,
 

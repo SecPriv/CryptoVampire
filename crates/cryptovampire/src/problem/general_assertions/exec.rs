@@ -3,14 +3,15 @@ use crate::formula::file_descriptior::axioms::Axiom;
 use crate::formula::file_descriptior::declare::Declaration;
 use crate::formula::formula::{ARichFormula, ands, meq};
 use crate::formula::function::builtin::{
-    CONDITION_TO_BOOL, EXEC_PRED, HAPPENS, HAPPENS_SYMBOLIC, IMPLIES, LESS_THAN_STEP, LESS_THAN_STEP_SYMBOLIC,
+    CONDITION_TO_BOOL, EXEC_PRED, HAPPENS, HAPPENS_SYMBOLIC, IMPLIES, LESS_THAN_STEP,
+    LESS_THAN_STEP_SYMBOLIC,
 };
 use crate::formula::sort::builtins::STEP;
 use crate::formula::utils::Applicable;
 use crate::formula::variable::{IntoVariableIter, Variable};
+use crate::mforall;
 use crate::problem::general_assertions::evaluate::eval_condition;
 use crate::problem::problem::Problem;
-use crate::mforall;
 
 /// Emit the definitional axiom for the named `exec_pred : Step -> Bool`
 /// symbol, generalising the hand-written `pred_exec!` macro / `pred_exec`
@@ -77,7 +78,7 @@ pub fn generate<'bump>(
         let args: Vec<ARichFormula<'_>> = vars.iter().cloned().map(Into::into).collect();
         let guard = s.apply_condition(&args);
         let step_term = s.function().f(args.clone());
-        let before =  lt.f([step_term, t.into()]);
+        let before = lt.f([step_term, t.into()]);
         // push `evaluate_cond` down into the step's guard, like the macro did
         let after = eval_condition(pbl, guard);
         conjuncts.push(mforall!(vars.into_iter(), { IMPLIES.f([before, after]) }));

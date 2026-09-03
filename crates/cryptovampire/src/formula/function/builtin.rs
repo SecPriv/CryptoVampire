@@ -151,17 +151,14 @@ pub static LESS_THAN_STEP: Function<'static> =
     }));
 
 #[dynamic]
-pub static LESS_THAN_STEP_SYMBOLIC : Function<'static> =
-    new_static_function(InnerFunction::TermAlgebra(
-        TermAlgebra::Function(
-            BaseFunction {
-                name: "s_lt".into(),
-                args: Box::new([*STEP, *STEP]),
-                out: *CONDITION,
-                eval_fun: *LESS_THAN_STEP
-            }
-        )
-    ));
+pub static LESS_THAN_STEP_SYMBOLIC: Function<'static> = new_static_function(
+    InnerFunction::TermAlgebra(TermAlgebra::Function(BaseFunction {
+        name: "s_lt".into(),
+        args: Box::new([*STEP, *STEP]),
+        out: *CONDITION,
+        eval_fun: *LESS_THAN_STEP,
+    })),
+);
 
 #[dynamic]
 pub static GREATER_THAN_STEP: Function<'static> =
@@ -186,19 +183,15 @@ pub static HAPPENS: Function<'static> = new_static_function(InnerFunction::Predi
     // out: BOOL.clone(),
 }));
 
-
 #[dynamic]
-pub static HAPPENS_SYMBOLIC : Function<'static> =
-    new_static_function(InnerFunction::TermAlgebra(
-        TermAlgebra::Function(
-            BaseFunction {
-                name: "s_happens".into(),
-                args: Box::new([*STEP]),
-                out: *CONDITION,
-                eval_fun: *HAPPENS
-            }
-        )
-    ));
+pub static HAPPENS_SYMBOLIC: Function<'static> = new_static_function(InnerFunction::TermAlgebra(
+    TermAlgebra::Function(BaseFunction {
+        name: "s_happens".into(),
+        args: Box::new([*STEP]),
+        out: *CONDITION,
+        eval_fun: *HAPPENS,
+    }),
+));
 
 #[dynamic]
 pub static IF_THEN_ELSE_TA: Function<'static> = new_static_function(InnerFunction::TermAlgebra(

@@ -246,11 +246,14 @@ pub fn get_function<'b, 'a, 'bump, S>(
         && str.deref() == "exec_pred"
         && !env.warned_exec_pred.swap(true, Ordering::Relaxed)
     {
-        eprintln!("warning: {}", span.render_with(
-            "`exec_pred` is used but `--exec-pred` is not enabled; `exec_pred` will be left \
+        eprintln!(
+            "warning: {}",
+            span.render_with(
+                "`exec_pred` is used but `--exec-pred` is not enabled; `exec_pred` will be left \
              as an uninterpreted function (its definitional axiom is not emitted).\n\
              \tRun with `--exec-pred` if you meant the tool-provided predicate."
-        ));
+            )
+        );
     }
     env.functions
         .get(Deref::deref(&str))

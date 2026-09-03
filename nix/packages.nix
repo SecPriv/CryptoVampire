@@ -1,7 +1,17 @@
-{ inputs, lib, self, ... }:
+{
+  inputs,
+  lib,
+  self,
+  ...
+}:
 {
   perSystem =
-    { self', pkgs, system, ... }:
+    {
+      self',
+      pkgs,
+      system,
+      ...
+    }:
     {
       packages = {
         default = self'.packages.cryptovampire2;
@@ -22,9 +32,15 @@
           version = "0.1.0";
           src = lib.cleanSourceWith {
             src = self;
-            filter = path: type:
-              !(builtins.elem (baseNameOf path)
-                [ "target" "out" "result" "book" ".direnv" ]);
+            filter =
+              path: type:
+              !(builtins.elem (baseNameOf path) [
+                "target"
+                "out"
+                "result"
+                "book"
+                ".direnv"
+              ]);
           };
           nativeBuildInputs = with pkgs; [
             mdbook

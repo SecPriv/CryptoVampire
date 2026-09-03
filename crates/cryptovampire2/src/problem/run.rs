@@ -286,12 +286,13 @@ impl Problem {
 
         // generate a latex main.tex that imports all dumped step forests
         if dump_format.is_latex()
-            && let Some(dir) = &dump_proof {
-                let main = golgge::latex_main(&dumped_steps);
-                if let Err(e) = std::fs::write(dir.join("main.tex"), main) {
-                    log::warn!("failed to write latex main.tex: {e}");
-                }
+            && let Some(dir) = &dump_proof
+        {
+            let main = golgge::latex_main(&dumped_steps);
+            if let Err(e) = std::fs::write(dir.join("main.tex"), main) {
+                log::warn!("failed to write latex main.tex: {e}");
             }
+        }
 
         res
     }

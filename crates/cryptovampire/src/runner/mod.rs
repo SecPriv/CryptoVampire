@@ -17,8 +17,8 @@
 //!
 //! [Problem]: crate::problem::Problem
 
-mod error;
 mod cvc5;
+mod error;
 #[allow(clippy::module_inception)]
 mod runner;
 mod runner_helper;

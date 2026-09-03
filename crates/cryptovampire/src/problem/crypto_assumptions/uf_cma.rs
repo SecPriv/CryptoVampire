@@ -17,12 +17,12 @@ use crate::environement::traits::KnowsRealm;
 use crate::formula::file_descriptior::axioms::Axiom;
 use crate::formula::file_descriptior::declare::Declaration;
 use crate::formula::formula::{ARichFormula, RichFormula, forall, meq};
-use crate::formula::function::{Function, InnerFunction};
 use crate::formula::function::builtin::{EQUALITY, EQUALITY_TA, MESSAGE_TO_BITSTRING};
 use crate::formula::function::inner::subterm::Subsubterm;
 use crate::formula::function::inner::term_algebra::TermAlgebra;
 use crate::formula::function::inner::term_algebra::quantifier::InnerQuantifier;
 use crate::formula::function::signature::StaticSignature;
+use crate::formula::function::{Function, InnerFunction};
 use crate::formula::manipulation::OneVarSubst;
 use crate::formula::sort::builtins::{MESSAGE, NAME};
 use crate::formula::utils::Applicable;
@@ -209,21 +209,17 @@ impl<'bump> UfCma<'bump> {
         //
         // This looks like a sound suggesting from the AI.
         // It might lead to crashes due to variables escaping their scope. (but it shouldn't)
-        let find_conditions = pbl
-            .functions()
-            .iter()
-            .filter_map(|f| match f.as_inner() {
-                InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
-                    if q.inner().is_find_such_that() =>
-                {
-                    let InnerQuantifier::FindSuchThat { condition, .. } = q.inner()
-                    else {
-                        unreachable!()
-                    };
-                    Some(condition)
-                }
-                _ => None,
-            });
+        let find_conditions = pbl.functions().iter().filter_map(|f| match f.as_inner() {
+            InnerFunction::TermAlgebra(TermAlgebra::Quantifier(q))
+                if q.inner().is_find_such_that() =>
+            {
+                let InnerQuantifier::FindSuchThat { condition, .. } = q.inner() else {
+                    unreachable!()
+                };
+                Some(condition)
+            }
+            _ => None,
+        });
 
         let candidates = chain![
             pbl.list_top_level_terms()
@@ -233,223 +229,215 @@ impl<'bump> UfCma<'bump> {
         .flat_map(move |formula| match formula.as_ref() {
             RichFormula::Fun(fun, args) => {
                 trace!("{:}", formula.as_ref());
-                    chain![
-                        // <-- using chain to not miss situations like hash(x, y) = hash(w, z)
-                        if_chain! { // verify
-                            if fun == &self.verify;
-                            if let [sign, mess, key] = args.as_ref();
-                            if let RichFormula::Fun(f, args) = key.as_ref();
-                            if f == cast_messages;
-                            if let [key] = args.as_ref();
-                            then {
-                                Some(prepare_candidate(max_var, mess, sign, key))
-                            } else {None}
-                        },
-                        if_chain! { // hash(m, k) = sigma, with no evaluate (hmac)
-                            if self.is_hmac();
-                            // if realm.is_evaluated();
-                            if fun == &EQUALITY.clone();
-                            if let [hmaced, sign] = args.as_ref();
-                            if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
-                            if hmac == &self.mac;
-                            if let [mess, key] = argshash.as_ref();
-                            if let RichFormula::Fun(nf, argk) = key.as_ref();
-                            if nf == cast_messages;
-                            if let [key] = argk.as_ref();
-                            then {
-                                Some(prepare_candidate(max_var, mess, sign, key))
-                            } else {None}
-                        },
-                        if_chain! { // sigma = hash(m, k), with no evaluate
-                            if self.is_hmac();
-                            // if realm.is_evaluated();
-                            if fun == &EQUALITY.clone();
-                            if let [sign, hmaced] = args.as_ref();
-                            if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
-                            if hmac == &self.mac;
-                            if let [mess, key] = argshash.as_ref();
-                            if let RichFormula::Fun(nf, argk) = key.as_ref();
-                            if nf == cast_messages;
-                            if let [key] = argk.as_ref();
-                            then {
-                                Some(prepare_candidate(max_var, mess, sign, key))
-                            } else {None}
-                        },
-                        if_chain! { // |hash(m, k)| = |sigma|
-                            if self.is_hmac();
-                            // if realm.is_symbolic();
-                            if fun == &EQUALITY.clone();
-                            if let [e_hmaced, e_sign] = args.as_ref();
-                            if let RichFormula::Fun(eval1, args_e_sign) = e_sign.as_ref();
-                            if let RichFormula::Fun(eval2, args_e_hmaced) = e_hmaced.as_ref();
-                            if (eval1 == eval2) && (eval1 == &MESSAGE_TO_BITSTRING.clone());
-                            if let [hmaced] = args_e_hmaced.as_ref();
-                            if let [sign] = args_e_sign.as_ref();
-                            if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
-                            if hmac == &self.mac;
-                            if let [mess, key] = argshash.as_ref();
-                            if let RichFormula::Fun(nf, argk) = key.as_ref();
-                            if nf == cast_messages;
-                            if let [key] = argk.as_ref();
-                            then {
-                                Some(prepare_candidate(max_var, mess, sign, key))
-                            } else {None}
-                        },
-                        if_chain! { // |sigma| = |hash(m, k)|
-                            if self.is_hmac();
-                            // if realm.is_symbolic();
-                            if fun == &EQUALITY.clone();
-                            if let [e_sign, e_hmaced] = args.as_ref();
-                            if let RichFormula::Fun(eval1, args_e_sign) = e_sign.as_ref();
-                            if let RichFormula::Fun(eval2, args_e_hmaced) = e_hmaced.as_ref();
-                            if (eval1 == eval2) && (eval1 == &MESSAGE_TO_BITSTRING.clone());
-                            if let [hmaced] = args_e_hmaced.as_ref();
-                            if let [sign] = args_e_sign.as_ref();
-                            if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
-                            if hmac == &self.mac;
-                            if let [mess, key] = argshash.as_ref();
-                            if let RichFormula::Fun(nf, argk) = key.as_ref();
-                            if nf == cast_messages;
-                            if let [key] = argk.as_ref();
-                            then {
-                                Some(prepare_candidate(max_var, mess, sign, key))
-                            } else {None}
-                        },
-                        if_chain! { // | ... hash(m, k) === sigma ... |
-                            if self.is_hmac();
-                            // if realm.is_symbolic();
-                            if fun == &EQUALITY_TA.clone();
-                            if let [hmaced, sign] = args.as_ref();
-                            if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
-                            if hmac == &self.mac;
-                            if let [mess, key] = argshash.as_ref();
-                            if let RichFormula::Fun(nf, argk) = key.as_ref();
-                            if nf == cast_messages;
-                            if let [key] = argk.as_ref();
-                            then {
-                                Some(prepare_candidate(max_var, mess, sign, key))
-                            } else {None}
-                        },
-                        if_chain! { // | .... sigma = hash(m, k) ... |, with no evaluate
-                            if self.is_hmac();
-                            // if realm.is_symbolic();
-                            if fun == &EQUALITY_TA.clone();
-                            if let [sign, hmaced] = args.as_ref();
-                            if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
-                            if hmac == &self.mac;
-                            if let [mess, key] = argshash.as_ref();
-                            if let RichFormula::Fun(nf, argk) = key.as_ref();
-                            if nf == cast_messages;
-                            if let [key] = argk.as_ref();
-                            then {
-                                Some(prepare_candidate(max_var, mess, sign, key))
-                            } else {None}
-                        },
-                    ]
-                    .collect_vec()
-                }
-                _ => vec![],
-            })
-            .unique()
-            .inspect(|candidate| trace!("uf-cma (preprocessing): found candidate:\n{candidate}"))
-            .filter_map(
-                move |UfCmaCandidate {
-                          message,
-                          signature,
-                          key,
-                      }| {
-                    let array = [&message, &signature, &key];
-                    // let max_var = array
-                    //     .iter()
-                    //     .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
-                    //     .map(|Variable { id, .. }| id)
-                    //     .max()
-                    //     .unwrap_or(max_var)
-                    //     + 1;
-                    let max_var = array.iter().copied().max_var_or_max(max_var);
-                    let free_vars = array
-                        .iter()
-                        .flat_map(|f| (*f).free_vars_iter())
-                        // .cloned()
-                        .unique();
-                    let u_var = Variable {
-                        id: max_var,
-                        sort: MESSAGE.as_sort(),
-                    };
-                    // let u_f = u_var.into_aformula();
+                chain![
+                    // <-- using chain to not miss situations like hash(x, y) = hash(w, z)
+                    if_chain! { // verify
+                        if fun == &self.verify;
+                        if let [sign, mess, key] = args.as_ref();
+                        if let RichFormula::Fun(f, args) = key.as_ref();
+                        if f == cast_messages;
+                        if let [key] = args.as_ref();
+                        then {
+                            Some(prepare_candidate(max_var, mess, sign, key))
+                        } else {None}
+                    },
+                    if_chain! { // hash(m, k) = sigma, with no evaluate (hmac)
+                        if self.is_hmac();
+                        // if realm.is_evaluated();
+                        if fun == &EQUALITY.clone();
+                        if let [hmaced, sign] = args.as_ref();
+                        if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
+                        if hmac == &self.mac;
+                        if let [mess, key] = argshash.as_ref();
+                        if let RichFormula::Fun(nf, argk) = key.as_ref();
+                        if nf == cast_messages;
+                        if let [key] = argk.as_ref();
+                        then {
+                            Some(prepare_candidate(max_var, mess, sign, key))
+                        } else {None}
+                    },
+                    if_chain! { // sigma = hash(m, k), with no evaluate
+                        if self.is_hmac();
+                        // if realm.is_evaluated();
+                        if fun == &EQUALITY.clone();
+                        if let [sign, hmaced] = args.as_ref();
+                        if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
+                        if hmac == &self.mac;
+                        if let [mess, key] = argshash.as_ref();
+                        if let RichFormula::Fun(nf, argk) = key.as_ref();
+                        if nf == cast_messages;
+                        if let [key] = argk.as_ref();
+                        then {
+                            Some(prepare_candidate(max_var, mess, sign, key))
+                        } else {None}
+                    },
+                    if_chain! { // |hash(m, k)| = |sigma|
+                        if self.is_hmac();
+                        // if realm.is_symbolic();
+                        if fun == &EQUALITY.clone();
+                        if let [e_hmaced, e_sign] = args.as_ref();
+                        if let RichFormula::Fun(eval1, args_e_sign) = e_sign.as_ref();
+                        if let RichFormula::Fun(eval2, args_e_hmaced) = e_hmaced.as_ref();
+                        if (eval1 == eval2) && (eval1 == &MESSAGE_TO_BITSTRING.clone());
+                        if let [hmaced] = args_e_hmaced.as_ref();
+                        if let [sign] = args_e_sign.as_ref();
+                        if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
+                        if hmac == &self.mac;
+                        if let [mess, key] = argshash.as_ref();
+                        if let RichFormula::Fun(nf, argk) = key.as_ref();
+                        if nf == cast_messages;
+                        if let [key] = argk.as_ref();
+                        then {
+                            Some(prepare_candidate(max_var, mess, sign, key))
+                        } else {None}
+                    },
+                    if_chain! { // |sigma| = |hash(m, k)|
+                        if self.is_hmac();
+                        // if realm.is_symbolic();
+                        if fun == &EQUALITY.clone();
+                        if let [e_sign, e_hmaced] = args.as_ref();
+                        if let RichFormula::Fun(eval1, args_e_sign) = e_sign.as_ref();
+                        if let RichFormula::Fun(eval2, args_e_hmaced) = e_hmaced.as_ref();
+                        if (eval1 == eval2) && (eval1 == &MESSAGE_TO_BITSTRING.clone());
+                        if let [hmaced] = args_e_hmaced.as_ref();
+                        if let [sign] = args_e_sign.as_ref();
+                        if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
+                        if hmac == &self.mac;
+                        if let [mess, key] = argshash.as_ref();
+                        if let RichFormula::Fun(nf, argk) = key.as_ref();
+                        if nf == cast_messages;
+                        if let [key] = argk.as_ref();
+                        then {
+                            Some(prepare_candidate(max_var, mess, sign, key))
+                        } else {None}
+                    },
+                    if_chain! { // | ... hash(m, k) === sigma ... |
+                        if self.is_hmac();
+                        // if realm.is_symbolic();
+                        if fun == &EQUALITY_TA.clone();
+                        if let [hmaced, sign] = args.as_ref();
+                        if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
+                        if hmac == &self.mac;
+                        if let [mess, key] = argshash.as_ref();
+                        if let RichFormula::Fun(nf, argk) = key.as_ref();
+                        if nf == cast_messages;
+                        if let [key] = argk.as_ref();
+                        then {
+                            Some(prepare_candidate(max_var, mess, sign, key))
+                        } else {None}
+                    },
+                    if_chain! { // | .... sigma = hash(m, k) ... |, with no evaluate
+                        if self.is_hmac();
+                        // if realm.is_symbolic();
+                        if fun == &EQUALITY_TA.clone();
+                        if let [sign, hmaced] = args.as_ref();
+                        if let RichFormula::Fun(hmac, argshash) = hmaced.as_ref();
+                        if hmac == &self.mac;
+                        if let [mess, key] = argshash.as_ref();
+                        if let RichFormula::Fun(nf, argk) = key.as_ref();
+                        if nf == cast_messages;
+                        if let [key] = argk.as_ref();
+                        then {
+                            Some(prepare_candidate(max_var, mess, sign, key))
+                        } else {None}
+                    },
+                ]
+                .collect_vec()
+            }
+            _ => vec![],
+        })
+        .unique()
+        .inspect(|candidate| trace!("uf-cma (preprocessing): found candidate:\n{candidate}"))
+        .filter_map(
+            move |UfCmaCandidate {
+                      message,
+                      signature,
+                      key,
+                  }| {
+                let array = [&message, &signature, &key];
+                // let max_var = array
+                //     .iter()
+                //     .flat_map(|f| f.used_variables_iter_with_pile(pile2.borrow_mut()))
+                //     .map(|Variable { id, .. }| id)
+                //     .max()
+                //     .unwrap_or(max_var)
+                //     + 1;
+                let max_var = array.iter().copied().max_var_or_max(max_var);
+                let free_vars = array
+                    .iter()
+                    .flat_map(|f| (*f).free_vars_iter())
+                    // .cloned()
+                    .unique();
+                let u_var = Variable {
+                    id: max_var,
+                    sort: MESSAGE.as_sort(),
+                };
+                // let u_f = u_var.into_aformula();
 
-                    let h_of_u = self.mac.f([
-                        u_var.into(),
-                        pbl.name_caster().cast(MESSAGE.as_sort(), &key),
-                    ]);
+                let h_of_u = self.mac.f([
+                    u_var.into(),
+                    pbl.name_caster().cast(MESSAGE.as_sort(), &key),
+                ]);
 
-                    let k_sc = subterm_key
-                        .preprocess_terms(
+                let k_sc = subterm_key
+                    .preprocess_terms(
+                        &realm,
+                        pbl.protocol(),
+                        &key,
+                        pbl.protocol()
+                            .list_top_level_terms_short_lifetime_and_bvars()
+                            .chain([&message, &signature].map(|t| t.shallow_copy().into())),
+                        false,
+                        NO_REC_MACRO,
+                    )
+                    .next()
+                    .is_none();
+                if k_sc {
+                    let mformula = {
+                        let iter = subterm_main.preprocess_terms(
                             &realm,
                             pbl.protocol(),
-                            &key,
-                            pbl.protocol()
-                                .list_top_level_terms_short_lifetime_and_bvars()
-                                .chain([&message, &signature].map(|t| t.shallow_copy().into())),
-                            false,
-                            NO_REC_MACRO,
-                        )
-                        .next()
-                        .is_none();
-                    if k_sc {
-                        let mformula = {
-                            let iter = subterm_main.preprocess_terms(
-                                &realm,
-                                pbl.protocol(),
-                                &h_of_u,
-                                [&message, &signature].map(|f| f.shallow_copy().into()),
-                                true,
-                                UnfoldFlags::all(),
-                            );
-                            into_exist_formula(iter)
-                        };
+                            &h_of_u,
+                            [&message, &signature].map(|f| f.shallow_copy().into()),
+                            true,
+                            UnfoldFlags::all(),
+                        );
+                        into_exist_formula(iter)
+                    };
 
-                        let app_key = pbl.name_caster().cast(MESSAGE.as_sort(), key.clone());
-                        if realm.is_symbolic_realm() {
-                            Some(mforall!(free_vars, {
-                                // pbl.evaluator().eval(self.verify.apply([
-                                //     signature.clone(),
-                                //     message.clone(),
-                                //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
-                                // ]))
-                                self.apply_eval_verify(
-                                    pbl,
-                                    signature.clone(),
-                                    message.clone(),
-                                    app_key,
-                                ) >> mexists!([u_var], {
+                    let app_key = pbl.name_caster().cast(MESSAGE.as_sort(), key.clone());
+                    if realm.is_symbolic_realm() {
+                        Some(mforall!(free_vars, {
+                            // pbl.evaluator().eval(self.verify.apply([
+                            //     signature.clone(),
+                            //     message.clone(),
+                            //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
+                            // ]))
+                            self.apply_eval_verify(pbl, signature.clone(), message.clone(), app_key)
+                                >> mexists!([u_var], {
                                     meq(pbl.evaluator().eval(u_var), pbl.evaluator().eval(&message))
                                         & mformula
                                 })
-                            }))
-                        } else {
-                            Some(mforall!(free_vars, {
-                                // pbl.evaluator().eval(self.verify.apply([
-                                //     signature.clone(),
-                                //     message.clone(),
-                                //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
-                                // ]))
-                                self.apply_eval_verify(
-                                    pbl,
-                                    signature.clone(),
-                                    message.clone(),
-                                    app_key,
-                                ) >> mformula.apply_substitution2(&OneVarSubst {
+                        }))
+                    } else {
+                        Some(mforall!(free_vars, {
+                            // pbl.evaluator().eval(self.verify.apply([
+                            //     signature.clone(),
+                            //     message.clone(),
+                            //     pbl.name_caster().cast(MESSAGE.as_sort(), key.clone()),
+                            // ]))
+                            self.apply_eval_verify(pbl, signature.clone(), message.clone(), app_key)
+                                >> mformula.apply_substitution2(&OneVarSubst {
                                     id: u_var.id,
                                     f: message.clone(),
                                 })
-                            }))
-                        }
-                    } else {
-                        None
+                        }))
                     }
-                },
-            );
+                } else {
+                    None
+                }
+            },
+        );
 
         // [].into_iter()
         candidates
